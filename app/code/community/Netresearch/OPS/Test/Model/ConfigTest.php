@@ -14,6 +14,7 @@ class Netresearch_OPS_Test_Model_ConfigTest
         $this->_model = Mage::getModel('ops/config');
     }
 
+
     public function testType()
     {
         $this->assertInstanceOf('Netresearch_OPS_Model_Config', $this->_model);
@@ -21,13 +22,18 @@ class Netresearch_OPS_Test_Model_ConfigTest
 
     public function testGetIntersolveBrands()
     {
+        $path = 'payment/ops_interSolve/brands';
+
+
+        Mage::getConfig()->saveConfig($path, serialize(array()));
+        Mage::getConfig()->cleanCache();
         $this->assertTrue(is_array($this->_model->getIntersolveBrands(null)));
+
         $this->assertEquals(
-            0,
-            sizeof($this->_model->getIntersolveBrands(null))
+            sizeof(unserialize(Mage::getStoreConfig('payment/ops_interSolve/brands', 0))),
+            sizeof($this->_model->getIntersolveBrands(0))
         );
 
-        $path = 'payment/ops_interSolve/brands';
 
         $newVouchers = array(
             array('brand' => '1234', 'value' => '1234'),
@@ -50,21 +56,21 @@ class Netresearch_OPS_Test_Model_ConfigTest
         );
 
         $pathRedirectAll = 'payment/ops_cc/redirect_all';
-        $pathSpecific    = 'payment/ops_cc/inline_types';
-        $store           = Mage::app()->getStore(0)->load(0);
+        $pathSpecific = 'payment/ops_cc/inline_types';
+        $store = Mage::app()->getStore(0)->load(0);
 
         $store->resetConfig();
         $store->setConfig($pathRedirectAll, 0);
         $store->setConfig($pathSpecific, 'MasterCard,VISA');
         $this->assertEquals(
             array('MasterCard', 'VISA'),
-            $this->_model->getInlinePaymentCcTypes()
+            $this->_model->getInlinePaymentCcTypes('ops_cc')
         );
 
         $store->resetConfig();
         $store->setConfig($pathRedirectAll, 1);
         $store->setConfig($pathSpecific, 'MasterCard,VISA');
-        $this->assertEquals(array(), $this->_model->getInlinePaymentCcTypes());
+        $this->assertEquals(array(), $this->_model->getInlinePaymentCcTypes('ops_cc'));
 
         $store->resetConfig();
     }
@@ -75,7 +81,7 @@ class Netresearch_OPS_Test_Model_ConfigTest
         $urlModel->expects($this->any())
             ->method('getUrl')
             ->with(
-                'ops/payment/generatehash',
+                'ops/alias/generatehash',
                 array('_secure' => false, '_nosid' => true)
             );
         $this->replaceByMock('model', 'core/url', $urlModel);
@@ -85,7 +91,7 @@ class Netresearch_OPS_Test_Model_ConfigTest
         $urlModel->expects($this->any())
             ->method('getUrl')
             ->with(
-                'ops/payment/generatehash',
+                'ops/alias/generatehash',
                 array('_secure' => false, '_nosid' => true, '_store' => 1)
             );
         $this->replaceByMock('model', 'core/url', $urlModel);
@@ -98,7 +104,7 @@ class Netresearch_OPS_Test_Model_ConfigTest
         $urlModel->expects($this->any())
             ->method('getUrl')
             ->with(
-                'ops/payment/acceptAlias',
+                'ops/alias/accept',
                 array('_secure' => false, '_nosid' => true)
             );
         $this->replaceByMock('model', 'core/url', $urlModel);
@@ -108,7 +114,7 @@ class Netresearch_OPS_Test_Model_ConfigTest
         $urlModel->expects($this->any())
             ->method('getUrl')
             ->with(
-                'ops/payment/acceptAlias',
+                'ops/alias/accept',
                 array('_secure' => false, '_nosid' => true, '_store' => 1)
             );
         $this->replaceByMock('model', 'core/url', $urlModel);
@@ -121,7 +127,7 @@ class Netresearch_OPS_Test_Model_ConfigTest
         $urlModel->expects($this->any())
             ->method('getUrl')
             ->with(
-                'ops/payment/exceptionAlias',
+                'ops/alias/exception',
                 array('_secure' => false, '_nosid' => true)
             );
         $this->replaceByMock('model', 'core/url', $urlModel);
@@ -131,7 +137,7 @@ class Netresearch_OPS_Test_Model_ConfigTest
         $urlModel->expects($this->any())
             ->method('getUrl')
             ->with(
-                'ops/payment/exceptionAlias',
+                'ops/alias/exception',
                 array('_secure' => false, '_nosid' => true, '_store' => 1)
             );
         $this->replaceByMock('model', 'core/url', $urlModel);
@@ -143,7 +149,7 @@ class Netresearch_OPS_Test_Model_ConfigTest
         $urlModel = $this->getModelMock('core/url', array('getUrl'));
         $urlModel->expects($this->any())
             ->method('getUrl')
-            ->with('ops/payment/saveAlias', array('_secure' => false));
+            ->with('ops/alias/save', array('_secure' => false));
         $this->replaceByMock('model', 'core/url', $urlModel);
         $this->_model->getCcSaveAliasUrl();
 
@@ -151,7 +157,7 @@ class Netresearch_OPS_Test_Model_ConfigTest
         $urlModel->expects($this->any())
             ->method('getUrl')
             ->with(
-                'ops/payment/saveAlias',
+                'ops/alias/save',
                 array('_secure' => false, '_store' => 1)
             );
         $this->replaceByMock('model', 'core/url', $urlModel);
@@ -160,7 +166,7 @@ class Netresearch_OPS_Test_Model_ConfigTest
 
     public function testIsAliasInfoBlockEnabled()
     {
-        $path  = 'payment/ops_cc/show_alias_manager_info_for_guests';
+        $path = 'payment/ops_cc/show_alias_manager_info_for_guests';
         $store = Mage::app()->getStore(0)->load(0);
         $store->resetConfig();
         $store->setConfig($path, 0);
@@ -196,16 +202,16 @@ class Netresearch_OPS_Test_Model_ConfigTest
     {
         $store = Mage::app()->getStore(0)->load(0);
         $this->assertEquals(
-            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_QUOTE_ID,
+            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID,
             $this->_model->getOrderReference()
         );
 
         $store->setConfig(
             'payment_services/ops/redirectOrderReference',
-            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID
+            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_QUOTE_ID
         );
         $this->assertEquals(
-            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID,
+            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_QUOTE_ID,
             $this->_model->getOrderReference()
         );
     }
@@ -219,28 +225,17 @@ class Netresearch_OPS_Test_Model_ConfigTest
         $this->assertEquals(0, $this->_model->getShowQuoteIdInOrderGrid());
     }
 
-
-    public function testIsTrackingCodeActivated()
-    {
-        $store = Mage::app()->getStore(0)->load(0);
-        $this->assertFalse($this->_model->isTrackingCodeActivated());
-
-        $store->setConfig('payment_services/ops/enableTrackingCode', 1);
-        $this->assertTrue($this->_model->isTrackingCodeActivated());
-    }
-
-
     public function testIsAliasManagerEnabled()
     {
-        $path  = 'payment/ops_cc/active_alias';
+        $path = 'payment/ops_cc/active_alias';
         $store = Mage::app()->getStore(0)->load(0);
         $store->resetConfig();
         $store->setConfig($path, 0);
-        $this->assertFalse($this->_model->isAliasManagerEnabled());
+        $this->assertFalse($this->_model->isAliasManagerEnabled('ops_cc'));
 
         $store->resetConfig();
         $store->setConfig($path, 1);
-        $this->assertTrue($this->_model->isAliasManagerEnabled());
+        $this->assertTrue($this->_model->isAliasManagerEnabled('ops_cc'));
 
     }
 
@@ -318,21 +313,13 @@ class Netresearch_OPS_Test_Model_ConfigTest
         $this->assertEquals('Netresearch_OPS_Model_Payment_OpenInvoiceNl', $capturePms['OpenInvoiceNl']);
     }
 
-
-    public function testGetDirectLinkMaintenanceApiPath()
-    {
-        $expectedResult = Mage::getStoreConfig('payment_services/ops/directlink_maintenance_api');
-        $this->assertEquals($expectedResult, $this->_model->getDirectLinkMaintenanceApiPath());
-    }
-
-
     public function testDisableCaptureForZeroAmountInvoiceEventExists()
     {
         $this->assertEventObserverDefined(
             'adminhtml',
             'core_block_abstract_prepare_layout_before',
             'ops/observer',
-            'coreBlockAbstractPrepareLayoutBefore'
+            'disableCaptureForZeroAmountInvoice'
         );
     }
 
@@ -382,11 +369,11 @@ class Netresearch_OPS_Test_Model_ConfigTest
     public function testCanSubmitExtraParameters()
     {
         $this->assertTrue($this->_model->canSubmitExtraParameter());
-        $path  = 'payment_services/ops/submitExtraParameters';
+        $path = 'payment_services/ops/submitExtraParameters';
         $store = Mage::app()->getStore(0)->load(0);
         $store->resetConfig();
         $store->setConfig($path, 0);
-        $this->assertFalse($this->_model->isAliasManagerEnabled());
+        $this->assertFalse($this->_model->isAliasManagerEnabled('ops_cc'));
     }
 
 
@@ -421,42 +408,164 @@ class Netresearch_OPS_Test_Model_ConfigTest
 
     }
 
-    public function testCheckForOpsStatusEventExists()
-    {
-        $this->assertEventObserverDefined(
-            'global',
-            'sales_order_save_before',
-            'ops/observer',
-            'checkForOpsStatus'
-        );
-    }
-
     public function testGetInlineOrderReference()
     {
         $store = Mage::app()->getStore(0)->load(0);
         $this->assertEquals(
-            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_QUOTE_ID,
+            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID,
             $this->_model->getInlineOrderReference()
         );
 
         $store->setConfig(
             'payment_services/ops/inlineOrderReference',
-            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID
+            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_QUOTE_ID
         );
         $this->assertEquals(
-            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID,
+            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_QUOTE_ID,
             $this->_model->getInlineOrderReference()
         );
     }
 
-    public function testSetOrderStateForDirectDebitsNlExists()
+    public function testSetOrderStateDirectLinkExists()
     {
         $this->assertEventObserverDefined(
             'global',
             'sales_order_payment_place_end',
             'ops/observer',
-            'setOrderStateForDirectDebitsNl'
+            'setOrderStateDirectLink'
         );
+    }
+
+    public function testGetFrontendGatewayPath()
+    {
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::CUSTOM);
+        $expectedResult = Mage::getStoreConfig('payment_services/ops/frontend_gateway');
+        $this->assertEquals($expectedResult, $this->_model->getFrontendGatewayPath(0));
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::TEST);
+        $this->assertContains('test', $this->_model->getFrontendGatewayPath(0));
+    }
+
+    public function testGetDirectLinkGatewayPath()
+    {
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::CUSTOM);
+        $expectedResult = Mage::getStoreConfig('payment_services/ops/directlink_gateway');
+        $this->assertEquals($expectedResult, $this->_model->getDirectLinkGatewayPath(0));
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::TEST);
+        $this->assertContains('test', $this->_model->getDirectLinkGatewayPath(0));
+    }
+
+    public function testGetDirectLinkGatewayOrderPath()
+    {
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::CUSTOM);
+        $expectedResult = Mage::getStoreConfig('payment_services/ops/directlink_gateway_order');
+        $this->assertEquals($expectedResult, $this->_model->getDirectLinkGatewayOrderPath(0));
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::TEST);
+        $this->assertContains('test', $this->_model->getDirectLinkGatewayOrderPath(0));
+    }
+
+    public function testGetAliasGatewayUrl()
+    {
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::CUSTOM);
+        $expectedResult = Mage::getStoreConfig('payment_services/ops/ops_alias_gateway');
+        $this->assertEquals($expectedResult, $this->_model->getAliasGatewayUrl(0));
+
+        // test with standard alias gateway
+        Mage::app()->getStore(0)->setConfig(
+            Netresearch_OPS_Model_Config::OPS_PAYMENT_PATH . 'ops_alias_gateway_test', ''
+        );
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::TEST);
+        $this->assertContains('ncol/test', $this->_model->getAliasGatewayUrl(0));
+
+        Mage::app()->getStore(0)->setConfig(
+            Netresearch_OPS_Model_Config::OPS_PAYMENT_PATH . 'ops_alias_gateway_test', 'abc'
+        );
+        $this->assertEquals('abc', $this->_model->getAliasGatewayUrl(0));
+
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::PROD);
+        $this->assertNotContains('ncol/prod', $this->_model->getAliasGatewayUrl(0));
+    }
+
+    public function testGetDirectLinkMaintenanceApiPath()
+    {
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::CUSTOM);
+        $expectedResult = Mage::getStoreConfig('payment_services/ops/directlink_maintenance_api');
+        $this->assertEquals($expectedResult, $this->_model->getDirectLinkMaintenanceApiPath(0));
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::TEST);
+        $this->assertContains('test', $this->_model->getDirectLinkMaintenanceApiPath(0));
+    }
+
+    public function testGetMode()
+    {
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::CUSTOM);
+        $this->assertEquals($this->_model->getMode(0), Netresearch_OPS_Model_Source_Mode::CUSTOM);
+    }
+
+    protected function setMode($mode, $storeId = 0)
+    {
+        Mage::app()->getStore($storeId)->setConfig(Netresearch_OPS_Model_Config::OPS_PAYMENT_PATH . 'mode', $mode);
+    }
+
+    public function testGetResendPaymentInfoTemplate()
+    {
+        $config = Mage::getModel('ops/config');
+        $this->assertEquals($config->getResendPaymentInfoTemplate(), 'payment_services_ops_resendPaymentInfo_template');
+    }
+
+    public function testGetResendPaymentInfoIdentity()
+    {
+        $config = Mage::getModel('ops/config');
+        $this->assertEquals($config->getResendPaymentInfoIdentity(), 'sales');
+    }
+
+    public function testGetOpsBaseUrl()
+    {
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::TEST);
+        $this->assertEquals('https://secure.domain.tld/ncol/test', $this->_model->getOpsBaseUrl(0));
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::PROD);
+        $this->assertEquals('https://secure.domain.tld/ncol/prod', $this->_model->getOpsBaseUrl(0));
+        $this->setMode(Netresearch_OPS_Model_Source_Mode::CUSTOM);
+        $this->assertEmpty($this->_model->getOpsBaseUrl(0));
+    }
+
+    public function testGetAllRecurringCcTypes()
+    {
+        /** @var Netresearch_OPS_Model_Config $config */
+        $config = Mage::getModel('ops/config');
+        $ccTypes = $config->getAllRecurringCcTypes();
+        $this->assertEquals(
+            $ccTypes, array('American Express', 'Diners Club', 'MaestroUK', 'MasterCard', 'VISA', 'JCB')
+        );
+    }
+
+    public function testGetAcceptedRecurringCcTypes()
+    {
+        /** @var Netresearch_OPS_Model_Config $config */
+        $config = Mage::getModel('ops/config');
+        $ccTypes = $config->getAcceptedRecurringCcTypes();
+        $this->assertEquals(
+            $ccTypes, array('American Express', 'Diners Club', 'MaestroUK', 'MasterCard', 'VISA', 'JCB')
+        );
+    }
+
+    public function testGetDeviceFingerPrinting()
+    {
+        $config = Mage::getModel('ops/config');
+        // default false
+        $this->assertFalse($config->getDeviceFingerPrinting(0));
+        Mage::app()->getStore(0)->setConfig(
+            Netresearch_OPS_Model_Config::OPS_PAYMENT_PATH . 'device_fingerprinting', 1
+        );
+        $this->assertTrue($config->getDeviceFingerPrinting(0));
+    }
+
+    public function testGetTransActionTimeout()
+    {
+        $config = Mage::getModel('ops/config');
+        // default false
+        Mage::app()->getStore(0)->setConfig(Netresearch_OPS_Model_Config::OPS_PAYMENT_PATH . 'ops_rtimeout', 0);
+        $this->assertEquals(0, $config->getTransActionTimeout(0));
+        Mage::app()->getStore(0)->setConfig(Netresearch_OPS_Model_Config::OPS_PAYMENT_PATH . 'ops_rtimeout', 45);
+        $this->assertEquals(45, $config->getTransActionTimeout(0));
     }
 }
 

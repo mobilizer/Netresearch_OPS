@@ -15,7 +15,7 @@ class Netresearch_OPS_Test_Block_Form_DirectDebitTest
         $this->replaceByMock('model', 'ops/config', $modelMock);
         $ccForm = new Netresearch_OPS_Block_Form_DirectDebit();
         $this->assertEquals(
-            Netresearch_OPS_Block_Form::FRONTEND_TEMPLATE,
+            Netresearch_OPS_Block_Form_DirectDebit::TEMPLATE,
             $ccForm->getTemplate()
         );
 
@@ -29,7 +29,7 @@ class Netresearch_OPS_Test_Block_Form_DirectDebitTest
         $this->replaceByMock('model', 'ops/config', $modelMock);
         $ccForm = new Netresearch_OPS_Block_Form_DirectDebit();
         $this->assertEquals(
-            Netresearch_OPS_Block_Form_DirectDebit::BACKEND_TEMPLATE,
+            Netresearch_OPS_Block_Form_DirectDebit::TEMPLATE,
             $ccForm->getTemplate()
         );
     }
@@ -55,7 +55,7 @@ class Netresearch_OPS_Test_Block_Form_DirectDebitTest
             'adminhtml/session', array('init', 'save')
         );
         $this->replaceByMock('model', 'adminhtml/session', $sessionMock);
-        $block          = new Netresearch_OPS_Block_Form_DirectDebit();
+        $block = new Netresearch_OPS_Block_Form_DirectDebit();
         $expectedResult = array(
             'country'  => '',
             'CN'       => '',

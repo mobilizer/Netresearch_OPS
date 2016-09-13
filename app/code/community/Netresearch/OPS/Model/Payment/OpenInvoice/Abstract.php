@@ -25,44 +25,42 @@
  */
 
 /**
- * open invoice payment via Ingenico Payment Services
+ * open invoice payment via PayEngine
  */
 class Netresearch_OPS_Model_Payment_OpenInvoice_Abstract extends Netresearch_OPS_Model_Payment_Abstract
 {
-    public function getMethodDependendFormFields($order, $requestParams=null)
+    protected $_needsCartDataForRequest = true;
+    protected $_needsShipToParams = false;
+
+    public function getMethodDependendFormFields($order, $requestParams = null)
     {
-        $formFields = array();
+        $formFields = parent::getMethodDependendFormFields($order, $requestParams);
+
         $billingAddress = $order->getBillingAddress();
-        $shippingAddress = $order->getShippingAddress();
         $birthday = new DateTime($order->getCustomerDob());
 
-        //$formFields['ECOM_SHIPTO_POSTAL_NAME_PREFIX']   = $shippingAddress->getPrefix();
-        $formFields['ECOM_BILLTO_POSTAL_NAME_FIRST']    = substr($billingAddress->getFirstname(), 0, 50);
-        $formFields['ECOM_BILLTO_POSTAL_NAME_LAST']     = substr($billingAddress->getLastname(), 0, 50);
-        $formFields['ECOM_SHIPTO_DOB']                  = $birthday->format('d/m/Y');
 
-        // Order Details
-        $count = 1;
-        foreach ($order->getAllItems() as $item) {
-            if ($item->getParentItemId() && $item->getParentItem()->getProductType() == 'configurable' || $item->getProductType() == 'bundle') {
-                continue;
-            }
-            $formFields = array_merge($formFields, $this->getItemFormFields($count, $item));
-            $count++;
+        $gender = $order->getCustomerGender() == 1 ? 'M' : 'F';
+
+
+        $billingAddress = $order->getBillingAddress();
+        $street = str_replace("\n", ' ', $billingAddress->getStreet(-1));
+        $regexp = '/^([^0-9]*)([0-9].*)$/';
+        if (!preg_match($regexp, $street, $splittedStreet)) {
+            $splittedStreet[1] = $street;
+            $splittedStreet[2] = '';
         }
 
-        return $formFields;
-    }
+        $formFields['OWNERADDRESS'] = trim($splittedStreet[1]);
+        $formFields['ECOM_BILLTO_POSTAL_STREET_NUMBER'] = trim($splittedStreet[2]);
 
-    public function getItemFormFields($count, $item)
-    {
-        $formFields = array();
-        $formFields['ITEMID' . $count]      = $item->getItemId();
-        $formFields['ITEMNAME' . $count]    = substr($item->getName(), 0, 40);
-        $formFields['ITEMPRICE' . $count]   = number_format($item->getBasePrice(), 2, '.', '');
-        $formFields['ITEMQUANT' . $count]   = (int) $item->getQtyOrdered();
-        $formFields['ITEMVATCODE' . $count] = str_replace(',', '.',(string)(float)$item->getTaxPercent()) . '%';
+        //$formFields['ECOM_SHIPTO_POSTAL_NAME_PREFIX']   = $shippingAddress->getPrefix();
+        $formFields['ECOM_BILLTO_POSTAL_NAME_FIRST'] = substr($billingAddress->getFirstname(), 0, 50);
+        $formFields['ECOM_BILLTO_POSTAL_NAME_LAST'] = substr($billingAddress->getLastname(), 0, 50);
+        $formFields['ECOM_SHIPTO_DOB'] = $birthday->format('d/m/Y');
+        $formFields['ECOM_CONSUMER_GENDER'] = $gender;
 
         return $formFields;
     }
+
 }

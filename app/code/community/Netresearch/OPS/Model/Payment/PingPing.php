@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_PingPing
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'PingPing';
+    protected $brand = 'PingPing';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -19,9 +22,5 @@ class Netresearch_OPS_Model_Payment_PingPing
     /** payment code */
     protected $_code = 'ops_pingPing';
 
-    public function getOpsCode($payment=null)
-    {
-        return 'PingPing';
-    }
 }
 

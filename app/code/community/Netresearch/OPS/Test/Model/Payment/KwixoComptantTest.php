@@ -11,6 +11,7 @@
  */
 class Netresearch_OPS_Test_Model_Payment_KwixoComptantTest extends EcomDev_PHPUnit_Test_Case_Config
 {
+    /** @var Netresearch_OPS_Model_Payment_KwixoComptant kwixoComptantModel */
     private $kwixoComptantModel;
     
     private $store;
@@ -19,7 +20,9 @@ class Netresearch_OPS_Test_Model_Payment_KwixoComptantTest extends EcomDev_PHPUn
     public function setUp()
     {
         parent::setup();
+        $payment = Mage::getModel('payment/info');
         $this->kwixoComptantModel = Mage::getModel('ops/payment_kwixoComptant');
+        $this->kwixoComptantModel->setInfoInstance($payment);
         $this->store = Mage::app()->getStore(0)->load(0);
     }
 

@@ -108,12 +108,11 @@ class Netresearch_OPS_Block_Adminhtml_Customer_Edit_Tab_Alias
             'index'         => 'alias',
         ));
 
-        /*
         $this->addColumn('payment_method', array(
-            'header'    => Mage::helper('ops')->__('Brand'),
+            'header'    => Mage::helper('ops')->__('Payment method'),
             'index'     => 'payment_method',
+            'renderer'  => 'Netresearch_OPS_Block_Adminhtml_Customer_Renderer_PaymentMethod'
         ));
-         */
 
         $this->addColumn('brand', array(
             'header'    => Mage::helper('ops')->__('Credit Card Type'),
@@ -150,7 +149,7 @@ class Netresearch_OPS_Block_Adminhtml_Customer_Edit_Tab_Alias
                 'actions'   => array(
                     array(
                         'caption'   => Mage::helper('ops')->__('Delete'),
-                        'url'       => array('base' => 'ops/adminhtml_alias/delete'),
+                        'url'       => array('base' => 'adminhtml/alias/delete'),
                         'field'     => 'id'
                     )
                 ),

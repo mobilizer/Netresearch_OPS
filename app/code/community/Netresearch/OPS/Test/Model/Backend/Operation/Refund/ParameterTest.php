@@ -5,8 +5,8 @@ class Netresearch_OPS_Test_Model_Backend_Operation_Refund_ParameterTest extends 
 
     public function testGetRequestParams()
     {
-        $fakePayment = new Varien_Object();
-        $fakePayment->setOrder(new Varien_Object());
+        $fakePayment = Mage::getModel('sales/order_payment');
+        $fakePayment->setOrder(Mage::getModel('sales/order'));
         $fakePayment->setAdditionalInformation(array('paymentId' => '4711'));
         $arrInfo          = array(
             'operation'  => 'refund',
@@ -24,12 +24,13 @@ class Netresearch_OPS_Test_Model_Backend_Operation_Refund_ParameterTest extends 
 
         $this->assertEquals(1000, $requestParams['AMOUNT']);
         $this->assertEquals(4711, $requestParams['PAYID']);
-        $this->assertEquals('refund', $requestParams['OPERATION']);
+        $this->assertEquals(Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_PARTIAL, $requestParams['OPERATION']);
         $this->assertEquals(Mage::app()->getStore($fakePayment->getOrder()->getStoreId())->getBaseCurrencyCode(), $requestParams['CURRENCY']);
     }
 
     public function testGetRequestParamsWithAdditionalParameters()
     {
+
         $fakePayment = Mage::getModel('sales/order_payment');
         $fakePayment->setOrder(Mage::getModel('sales/order'));
         $fakePayment->setAdditionalInformation(array('paymentId' => '4711'));
@@ -51,7 +52,7 @@ class Netresearch_OPS_Test_Model_Backend_Operation_Refund_ParameterTest extends 
 
         $this->assertEquals(1000, $requestParams['AMOUNT']);
         $this->assertEquals(4711, $requestParams['PAYID']);
-        $this->assertEquals('refund', $requestParams['OPERATION']);
+        $this->assertEquals(Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_PARTIAL, $requestParams['OPERATION']);
         $this->assertEquals(Mage::app()->getStore($fakePayment->getOrder()->getStoreId())->getBaseCurrencyCode(), $requestParams['CURRENCY']);
     }
 

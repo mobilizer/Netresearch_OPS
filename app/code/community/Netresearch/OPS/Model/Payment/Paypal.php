@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_Paypal
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'PAYPAL';
+    protected $brand = 'PAYPAL';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -19,9 +22,5 @@ class Netresearch_OPS_Model_Payment_Paypal
     /** payment code */
     protected $_code = 'ops_paypal';
 
-    public function getOpsCode($payment = null)
-    {
-        return 'PAYPAL';
-    }
 }
 

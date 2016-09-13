@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_CbcOnline
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'CBC Online';
+    protected $brand = 'CBC Online';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -18,11 +21,5 @@ class Netresearch_OPS_Model_Payment_CbcOnline
 
     /** payment code */
     protected $_code = 'ops_cbcOnline';
-
-    /** ops payment code */
-    public function getOpsCode($payment=null)
-    {
-        return 'CBC Online';
-    }
 }
 

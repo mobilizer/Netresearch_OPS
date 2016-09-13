@@ -12,6 +12,7 @@ tables:
      state:               'pending_payment'
      status:              'pending_payment'
      quote_id:            23
+     store_id:            0
 
    - entity_id:           12
      increment_id:        100000012
@@ -38,7 +39,8 @@ tables:
      state:               'processing'
      status:              'processing'
      quote_id:            25
-     
+     store_id:            0
+
    - entity_id:           14
      increment_id:        100000014
      shipping_address_id: 43
@@ -103,7 +105,7 @@ tables:
      state:               'pending_payment'
      status:              'pending_payment'
      quote_id:            30
-     
+
    - entity_id:           19
      increment_id:        100000019
      shipping_address_id: 50
@@ -166,7 +168,7 @@ tables:
      customer_email:      'hubertus.von.fuerstenberg@trash-mail.com'
      state:               'pending_payment'
      status:              'pending_payment'
-     
+
    - entity_id:           24
      increment_id:        100000024
      store_id:            1
@@ -290,6 +292,7 @@ tables:
      store_id: 0
      customer_id: 23
      created_at: '2013-05-14 14:45:00'
+     store_id:            0
 
    - entity_id: 11
      store_id: 0
@@ -341,7 +344,8 @@ tables:
    - entity_id:               3
      parent_id:               13
      additional_information:  a:3:{s:2:"PM";s:16:"Bank transfer DE";s:5:"BRAND";s:16:"Bank transfer DE";s:6:"status";s:1:"0";}
-     
+     method:                  'ops_bankTransfer'
+
    - entity_id:               4
      parent_id:               14
      additional_information:  a:2:{s:2:"PM";s:16:"Bank transfer DE";s:5:"BRAND";s:16:"Bank transfer DE";}
@@ -362,7 +366,7 @@ tables:
    - entity_id:               8
      parent_id:               18
      additional_information:  a:4:{s:2:"PM";s:16:"Bank transfer DE";s:5:"BRAND";s:16:"Bank transfer DE";s:23:"lastRefundOperationCode";s:3:"RFD";s:9:"canRefund";b:1;}
-   
+
    - entity_id:               9
      parent_id:               19
      method:                  'ops_openInvoiceDe'
@@ -427,12 +431,12 @@ tables:
      increment_id:        100000077
      order_id:            11
      shipping_address_id: 42
-  
+
    - entity_id:           2
      increment_id:        100000078
      order_id:            12
      shipping_address_id: 43
-     
+
   sales/order_address:
    - entity_id:    42
      parent_id:    11
@@ -449,7 +453,7 @@ tables:
      suffix:       'MdL'
      company:      ''
      fax:          12345678
-     
+
    - entity_id:    43
      parent_id:    11
      address_type: 'shipping'
@@ -465,7 +469,7 @@ tables:
      suffix:       'MdL'
      company:      ''
      same_as_billing: 1
-     
+
    - entity_id:    44
      parent_id:    12
      address_type: 'billing'
@@ -480,7 +484,7 @@ tables:
      middlename:   'von'
      suffix:       'MdL'
      company:      ''
-     
+
    - entity_id:    45
      parent_id:    12
      address_type: 'shipping'
@@ -496,7 +500,7 @@ tables:
      suffix:       'MdL'
      company:      ''
      same_as_billing: 1
-     
+
    - entity_id:    46
      parent_id:    24
      address_type: 'shipping'
@@ -528,6 +532,22 @@ tables:
      suffix:       'MdL'
      company:      ''
      same_as_shipping: 1
+
+   - entity_id:    147
+     parent_id:    27
+     address_type: 'shipping'
+     firstname:    'Hubertus'
+     postcode:     '04229'
+     lastname:     'Fürstenberg'
+     street:       '44 rue Parmentier'
+     city:         'Leipzig'
+     email:        'hubertus.von.fuerstenberg@trash-mail.com'
+     country_id:   'DE'
+     prefix:       'Prof. Dr.'
+     middlename:   'von'
+     suffix:       'MdL'
+     company:      ''
+
 
    - entity_id:    48
      parent_id:    28
@@ -574,6 +594,21 @@ tables:
      suffix:       'MdL'
      company:      ''
 
+   - entity_id:    51
+     parent_id:    15
+     address_type: 'shipping'
+     firstname:    'Hubertus'
+     postcode:     '04227'
+     lastname:     'Fürstenberg'
+     street:       '44 rue Parmentier'
+     city:         'Leipzig'
+     email:        'hubertus.von.fuerstenberg@trash-mail.com'
+     country_id:   'DE'
+     prefix:       'Prof. Dr.'
+     middlename:   'von'
+     suffix:       'MdL'
+     company:      ''
+
   sales/order_item:
    - item_id: 11
      order_id: 11
@@ -583,13 +618,22 @@ tables:
      name: 'some great test item'
      price: 19.99
      tax_amount: 1.99
-     
+
    - item_id: 12
      order_id: 11
      qty_ordered: 2.0000
      qty_shipped: 2.0000
      sku: 4711
      name: 'some great test item 2'
+     price: 19.99
+     tax_amount: 1.99
+
+   - item_id: 13
+     order_id: 19
+     qty_ordered: 1.0000
+     qty_shipped: 0.0000
+     sku: 4711
+     name: 'some great test item'
      price: 19.99
      tax_amount: 1.99
 

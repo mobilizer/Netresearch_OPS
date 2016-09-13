@@ -9,6 +9,10 @@
  */
 class Netresearch_OPS_Adminhtml_AliasController extends Mage_Adminhtml_Controller_Action
 {
+    use Netresearch_OPS_Trait_AliasController;
+
+    protected $_publicActions = array('accept', 'exception');
+
     protected function _isAllowed()
     {
         return Mage::getSingleton('admin/session')->isAllowed('customer/manage');

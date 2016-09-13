@@ -75,17 +75,13 @@ class Netresearch_OPS_Helper_Alias extends Mage_Core_Helper_Abstract
      *
      * @return string
      */
-    public function getAlias($quote)
+    public function getAlias($quote, $forceNew = false)
     {
         
         $alias = $quote->getPayment()->getAdditionalInformation('alias');
-        if (0 == strlen($alias)) {
+        if (0 == strlen($alias) || $forceNew) {
             /* turn createdAt into format MMDDHHii */
-            $createdAt = substr(
-                str_replace(array(':', '-', ' '), '', $quote->getCreatedAt()),
-                4,
-                -2
-            );
+            $createdAt = time();
             $quoteId = $quote->getId();
             /* shorten createdAt, if we would exceed maximum length */
             $maxAliasLength = 16;
@@ -115,60 +111,28 @@ class Netresearch_OPS_Helper_Alias extends Mage_Core_Helper_Abstract
         $quote = null;
         $aliasModel = null;
         Mage::helper('ops')->log('aliasData ' . Zend_Json::encode(Mage::helper('ops/data')->clearMsg($aliasData)));
-        if (array_key_exists('OrderID', $aliasData) && is_numeric($aliasData['OrderID'])) {
-            $quote = Mage::getModel('sales/quote')->load($aliasData['OrderID']);
+        if (array_key_exists('Alias_OrderId', $aliasData) && is_numeric($aliasData['Alias_OrderId'])) {
+            $quote = Mage::getModel('sales/quote')->load($aliasData['Alias_OrderId']);
         }
 
-        $aliasModel = null;
         if ($quote instanceof Mage_Sales_Model_Quote
             && $quote->getPayment()
-            && (1 == $quote->getPayment()->getAdditionalInformation('saveOpsAlias'))
+            && Mage::getSingleton('checkout/type_onepage')->getCheckoutMethod()
+            != Mage_Checkout_Model_Type_Onepage::METHOD_GUEST
+            && (array_key_exists('Alias_StorePermanently',$aliasData) && 'Y' == $aliasData['Alias_StorePermanently'])
         ) {
-            $customerId = $quote->getCustomer()->getId();
-            $billingAddressHash = $this->generateAddressHash(
-                $quote->getBillingAddress()
-            );
-            $shippingAddressHash = $this->generateAddressHash(
-                $quote->getShippingAddress()
-            );
 
-            // first: check if alias exists
-            $oldAlias = Mage::getModel('ops/alias')->getCollection()
-                ->addFieldToFilter('customer_id', $customerId)
-                ->addFieldToFilter('billing_address_hash', $billingAddressHash)
-                ->addFieldToFilter('shipping_address_hash', $shippingAddressHash)
-                ->addFieldToFilter('state', Netresearch_OPS_Model_Alias_State::ACTIVE)
-                ->addFieldToFilter('store_id', array(
-                    array('attribute' => 'store_id', 'eq' => $quote->getStoreId()),
-                    array('attribute' => 'store_id', 'null' => true)
-                ))
-                ->getFirstItem();
-            // and if so update this alias with alias data from alias gateway
-            if (is_numeric($oldAlias->getAlias())) {
-                $oldAlias->setCardHolder($aliasData['CN']);
-                $oldAlias->setBrand($aliasData['Brand']);
-                $oldAlias->setExpirationDate($aliasData['ED']);
-                $oldAlias->setPseudoAccountOrCCNo($aliasData['CardNo']);
-                $oldAlias->setStoreId($quote->getStoreId());
-                $oldAlias->save();
-                $aliasModel = $oldAlias;
-            } else {
-                // alias does not exist -> create a new one if requested
-                if (!is_null($quote) && $quote->getPayment()
-                    && $quote->getPayment()->getAdditionalInformation('saveOpsAlias')
-                ) {
-                    if (!is_null($quote->getCustomer()->getId())) {
-                        $this->deleteAlias($quote, $aliasData);
-                    }
-                    // create new alias
-                    $aliasModel = $this->saveNewAlias($quote, $aliasData);
-                    $quote->getPayment()->setAdditionalInformation(
-                        'opsAliasId', $aliasModel->getId()
-                    );
-                    $quote->getPayment()->save();
-                }
+            // alias does not exist -> create a new one if requested
+            if (!is_null($quote) && $quote->getPayment()) {
+                // create new alias
+                $aliasModel = $this->saveNewAlias($quote, $aliasData);
+                $quote->getPayment()->setAdditionalInformation(
+                    'opsAliasId', $aliasModel->getId()
+                );
+                $quote->getPayment()->save();
             }
         }
+
         return $aliasModel;
     }
 
@@ -212,17 +176,17 @@ class Netresearch_OPS_Helper_Alias extends Mage_Core_Helper_Abstract
 
         $aliasModel = Mage::getModel('ops/alias');
         $aliasModel->setCustomerId($customerId);
-        $aliasModel->setAlias($aliasData['Alias']);
-        $aliasModel->setExpirationDate($aliasData['ED']);
+        $aliasModel->setAlias($aliasData['Alias_AliasId']);
+        $aliasModel->setExpirationDate($aliasData['Card_ExpiryDate']);
         $aliasModel->setBillingAddressHash($billingAddressHash);
         $aliasModel->setShippingAddressHash($shippingAddressHash);
-        $aliasModel->setBrand($aliasData['Brand']);
+        $aliasModel->setBrand($aliasData['Card_Brand']);
         $aliasModel->setPaymentMethod($quote->getPayment()->getMethod());
-        $aliasModel->setPseudoAccountOrCCNo($aliasData['CardNo']);
+        $aliasModel->setPseudoAccountOrCCNo($aliasData['Card_CardNumber']);
         $aliasModel->setState(Netresearch_OPS_Model_Alias_State::PENDING);
         $aliasModel->setStoreId($quote->getStoreId());
-        if (array_key_exists('CN', $aliasData)) {
-            $aliasModel->setCardHolder($aliasData['CN']);
+        if (array_key_exists('Card_CardHolderName', $aliasData)) {
+            $aliasModel->setCardHolder($aliasData['Card_CardHolderName']);
         }
         Mage::helper('ops')->log(
             'saving alias' . Zend_Json::encode($aliasModel->getData())
@@ -237,12 +201,14 @@ class Netresearch_OPS_Helper_Alias extends Mage_Core_Helper_Abstract
      *
      * @param Mage_Sales_Model_Quote_Address $address the address data to hash
      *
-     * @returns sha1 hash of address
+     * @returns string hash of address
      */
     public function generateAddressHash(
     Mage_Customer_Model_Address_Abstract $address
     )
     {
+        /** @var Netresearch_OPS_Helper_Payment $opsHelper */
+        $opsHelper = Mage::helper('ops/payment');
         $addressString = $address->getFirstname();
         $addressString .= $address->getMiddlename();
         $addressString .= $address->getLastname();
@@ -256,7 +222,7 @@ class Netresearch_OPS_Helper_Alias extends Mage_Core_Helper_Abstract
         $addressString .= $address->getCity();
         $addressString .= $address->getCountryId();
 
-        return sha1($addressString);
+        return hash($opsHelper->getCryptMethod(), $addressString);
     }
 
     /**
@@ -370,20 +336,27 @@ class Netresearch_OPS_Helper_Alias extends Mage_Core_Helper_Abstract
      */
     public function setAliasToPayment(Mage_Payment_Model_Info $payment, array $aliasData, $userIsRegistering = false, $paymentSave = false)
     {
-        if (array_key_exists('alias', $aliasData) && 0 < strlen(trim($aliasData['alias']))) {
-            $payment->setAdditionalInformation('alias', trim($aliasData['alias']));
+        if (array_key_exists('alias_aliasid', $aliasData) && 0 < strlen(trim($aliasData['alias_aliasid']))) {
+            $payment->setAdditionalInformation('alias', trim($aliasData['alias_aliasid']));
             $payment->setAdditionalInformation('userIsRegistering', $userIsRegistering);
-            if (array_key_exists('CVC', $aliasData)) {
-                $payment->setAdditionalInformation('cvc', $aliasData['CVC']);
+            if (array_key_exists('card_cvc', $aliasData)) {
+                $payment->setAdditionalInformation('cvc', $aliasData['card_cvc']);
                 $this->setCardHolderToAlias($payment->getQuote(), $aliasData);
             }
+
+            if ( array_key_exists('method', $aliasData)) {
+                $alias = Mage::getModel('ops/alias')->load($aliasData['alias_aliasid'], 'alias');
+                $alias->setPaymentMethod($aliasData['method']);
+                $alias->save();
+            }
+
             $payment->setDataChanges(true);
             if($paymentSave === true){
                 $payment->save();
             }
         } else {
             Mage::helper('ops/data')->log('did not save alias due to empty alias');
-            Mage::helper('ops/data')->log($aliasData);
+            Mage::helper('ops/data')->log(serialize($aliasData));
         }
     }
 
@@ -400,9 +373,9 @@ class Netresearch_OPS_Helper_Alias extends Mage_Core_Helper_Abstract
             ->addFieldToFilter('store_id', array(array('eq' => $quote->getStoreId()), array('null' => true)))
             ->getFirstItem();
         // and if so update this alias with alias data from alias gateway
-        if (is_numeric($oldAlias->getId()) && is_null($oldAlias->getCardHolder()) && array_key_exists('CN', $aliasData)
+        if (is_numeric($oldAlias->getId()) && is_null($oldAlias->getCardHolder()) && array_key_exists('Card_CardHolderName', $aliasData)
         ) {
-            $oldAlias->setCardHolder($aliasData['CN']);
+            $oldAlias->setCardHolder($aliasData['Card_CardHolderName']);
             $oldAlias->save();
         }
     }
@@ -418,7 +391,7 @@ class Netresearch_OPS_Helper_Alias extends Mage_Core_Helper_Abstract
         $saveSalesObjects = false
     ) {
         if (is_null($quote->getPayment()->getAdditionalInformation('userIsRegistering'))
-            || false === $quote->getPayment()->getAdditionalInformation('userIsRegistering')
+            || false == $quote->getPayment()->getAdditionalInformation('userIsRegistering')
         ) {
             $aliasesToDelete = Mage::helper('ops/alias')->getAliasesForAddresses(
                     $quote->getCustomer()->getId(), $quote->getBillingAddress(), $quote->getShippingAddress()
@@ -439,6 +412,7 @@ class Netresearch_OPS_Helper_Alias extends Mage_Core_Helper_Abstract
                     $alias->delete();
                 }
                 $lastPendingAlias->setState(Netresearch_OPS_Model_Alias_State::ACTIVE);
+                $lastPendingAlias->setPaymentMethod($order->getPayment()->getMethod());
                 $lastPendingAlias->save();
             }
         } else {
@@ -452,7 +426,7 @@ class Netresearch_OPS_Helper_Alias extends Mage_Core_Helper_Abstract
     Mage_Sales_Model_Order $order, Mage_Sales_Model_Quote $quote
     )
     {
-        if (true === $quote->getPayment()->getAdditionalInformation('userIsRegistering')
+        if (true == $quote->getPayment()->getAdditionalInformation('userIsRegistering')
         ) {
             $customerId = $order->getCustomerId();
             $billingAddressHash = $this->generateAddressHash(
@@ -477,12 +451,11 @@ class Netresearch_OPS_Helper_Alias extends Mage_Core_Helper_Abstract
                     )
                     ->addFieldToFilter('store_id', array('eq' => $quote->getStoreId()))
                     ->getFirstItem();
-                if ($alias->getState() === Netresearch_OPS_Model_Alias_State::PENDING
-                ) {
-                    $alias->setState(Netresearch_OPS_Model_Alias_State::ACTIVE);
-                    $alias->setCustomerId($customerId);
-                    $alias->save();
-                }
+
+                $alias->setState(Netresearch_OPS_Model_Alias_State::ACTIVE);
+                $alias->setPaymentMethod($order->getPayment()->getMethod());
+                $alias->setCustomerId($customerId);
+                $alias->save();
             }
         }
     }

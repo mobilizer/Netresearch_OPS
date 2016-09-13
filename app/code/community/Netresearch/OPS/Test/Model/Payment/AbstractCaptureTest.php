@@ -74,6 +74,8 @@ class Netresearch_OPS_Test_Model_Payment_AbstractCaptureTest
 
     public function testCaptureWillPerformRequest()
     {
+//        $this->markTestIncomplete();
+
         $testOrder   = $this->getOrderMock();
         $testPayment = $this->preparePayment($testOrder);
         $testPayment->setAdditionalInformation('paymentId', 'payID');
@@ -81,32 +83,30 @@ class Netresearch_OPS_Test_Model_Payment_AbstractCaptureTest
         $this->mockOrderCaptureHelper();
         $requestParams   = $this->getCaptureRequestParams($amount, $testPayment);
         $testOpsResponse = $this->returnValue(
-            array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSED_MERCHANT)
+            array('STATUS' => Netresearch_OPS_Model_Status::PAYMENT_PROCESSED_BY_MERCHANT)
         );
         $this->mockApiDirectLink($requestParams, $testOpsResponse);
         $paymentHelperMock = $this->getHelperMock('ops/payment', array('saveOpsStatusToPayment'));
         $this->replaceByMock('helper', 'ops/payment', $paymentHelperMock);
-
+        $this->testObject->setInfoInstance($testPayment);
         $this->testObject->capture($testPayment, $amount);
     }
 
 
     public function testCaptureWillPerformRequestWithPaymentProcessing()
     {
+//        $this->markTestIncomplete();
+
         $testOrder   = $this->getOrderMock();
         $testPayment = $this->preparePayment($testOrder);
         $amount      = 10;
         $this->mockDirectlinkHelperCheckDirectLinkTransact($this->returnValue(false));
-        $message = Mage::helper('ops/data')->__(
-            'Invoice will be created automatically as soon as Ingenico Payment Services sends an acknowledgement. Ingenico Payment Services status: %s.',
-            Mage::helper('ops')->getStatusText(Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSING)
-        );
-        $this->mockDataHelperMockRedirectNoticed($testOrder->getId(), $message);
+
         $this->mockOrderCaptureHelper(array('operation' => 'SAS', 'type' => 'capture'));
         $requestParams   = $this->getCaptureRequestParams($amount, $testPayment);
         $testOpsResponse = $this->returnValue(
             array(
-                'STATUS'   => Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSING,
+                'STATUS'   => Netresearch_OPS_Model_Status::PAYMENT_PROCESSING,
                 'PAYID'    => 4711,
                 'PAYIDSUB' => 1
             )
@@ -114,7 +114,7 @@ class Netresearch_OPS_Test_Model_Payment_AbstractCaptureTest
         $this->mockApiDirectLink($requestParams, $testOpsResponse);
         $paymentHelperMock = $this->getHelperMock('ops/payment', array('saveOpsStatusToPayment'));
         $this->replaceByMock('helper', 'ops/payment', $paymentHelperMock);
-
+        $this->testObject->setInfoInstance($testPayment);
         $this->testObject->capture($testPayment, $amount);
     }
 
@@ -129,14 +129,14 @@ class Netresearch_OPS_Test_Model_Payment_AbstractCaptureTest
         $amount = 10;
         $this->mockOrderCaptureHelper();
         $requestParams   = $this->getCaptureRequestParams($amount, $testPayment);
-        $testOpsResponse = $this->returnValue(array('STATUS' => 0));
+        $testOpsResponse = $this->returnValue(array('STATUS' => 320));
         $this->mockApiDirectLink($requestParams, $testOpsResponse);
         $paymentHelperMock = $this->getHelperMock('ops/payment', array('saveOpsStatusToPayment'));
         $this->replaceByMock('helper', 'ops/payment', $paymentHelperMock);
 
         $statusUpdateMock = $this->getModelMock('ops/status_update', array('updateStatusFor'));
         $this->replaceByMock('model', 'ops/status_update', $statusUpdateMock);
-
+        $this->testObject->setInfoInstance($testPayment);
         $this->testObject->capture($testPayment, $amount);
     }
 
@@ -157,7 +157,7 @@ class Netresearch_OPS_Test_Model_Payment_AbstractCaptureTest
         $statusUpdateMock = $this->getModelMock('ops/status_update', array('updateStatusFor'));
         $this->replaceByMock('model', 'ops/status_update', $statusUpdateMock);
 
-
+        $this->testObject->setInfoInstance($testPayment);
         $this->testObject->capture($testPayment, $amount);
     }
 
@@ -188,12 +188,14 @@ class Netresearch_OPS_Test_Model_Payment_AbstractCaptureTest
     /**
      * @return array
      */
-    protected function preparePayment($order)
+    protected function preparePayment($order, $method = 'ops_iDeal')
     {
         $payment = Mage::getModel('sales/order_payment');
         $payment->setOrder($order);
+        $payment->setMethod($method);
         $payment->setAdditionalInformation('paymentId', 'payID');
 
+        $order->setPayment($payment);
         return $payment;
     }
 
@@ -225,7 +227,7 @@ class Netresearch_OPS_Test_Model_Payment_AbstractCaptureTest
         $requestParams = array(
             'AMOUNT'    => Mage::helper('ops/data')->getAmount($amount),
             'PAYID'     => $testPayment->getAdditionalInformation('paymentId'),
-            'OPERATION' => 'SAS',
+            'OPERATION' => Mage::helper('ops/order_capture')->determineOperationCode($testPayment, $amount),
             'CURRENCY'  => Mage::app()->getStore()->getBaseCurrencyCode()
         );
 

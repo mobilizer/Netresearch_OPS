@@ -31,7 +31,7 @@ class Netresearch_OPS_Test_Helper_Payment_DirectLink_RequestTest extends EcomDev
         foreach ($this->getShippingParams() as $shippingParam) {
             $this->assertArrayNotHasKey($shippingParam, $params);
         }
-
+        $this->assertArrayHasKey('RTIMEOUT', $params);
     }
 
     /**
@@ -56,6 +56,7 @@ class Netresearch_OPS_Test_Helper_Payment_DirectLink_RequestTest extends EcomDev
         foreach ($this->getShippingParams() as $shippingParam) {
             $this->assertArrayHasKey($shippingParam, $params);
         }
+        $this->assertArrayHasKey('RTIMEOUT', $params);
 
     }
 

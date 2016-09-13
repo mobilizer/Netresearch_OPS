@@ -12,7 +12,7 @@ class Netresearch_OPS_Test_Model_Payment_AbstractRefundTest extends EcomDev_PHPU
     public function setUp()
     {
         parent::setUp();
-        $this->testObject = $this->getModelMock('ops/payment_abstract', array('canRefund'));
+        $this->testObject = $this->getModelMock('ops/payment_cc', array('canRefund'));
         $this->testObject->expects($this->any())
             ->method('canRefund')
             ->will($this->returnValue(true));
@@ -32,14 +32,6 @@ class Netresearch_OPS_Test_Model_Payment_AbstractRefundTest extends EcomDev_PHPU
         Mage::unregister('ops_auto_creditmemo');
     }
 
-    public function testRefundWithAutoCreditmemo()
-    {
-        Mage::register('ops_auto_creditmemo', true);
-        $payment = new Varien_Object();
-        $amount  = null;
-        $this->testObject->refund($payment, $amount);
-    }
-
     /**
      *
      */
@@ -51,10 +43,10 @@ class Netresearch_OPS_Test_Model_Payment_AbstractRefundTest extends EcomDev_PHPU
         $amount          = 10;
         $requestParams   = $this->getRequestParams($amount, $testPayment);
         $testOpsResponse = $this->returnValue(
-                                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_UNCERTAIN_STATUS)
+                                array('STATUS' => Netresearch_OPS_Model_Status::REFUND_UNCERTAIN)
         );
         $this->mockApiDirectLink($requestParams, $testOpsResponse);
-
+        $this->testObject->setInfoInstance($testPayment);
         $this->testObject->refund($testPayment, $amount);
     }
 
@@ -69,10 +61,10 @@ class Netresearch_OPS_Test_Model_Payment_AbstractRefundTest extends EcomDev_PHPU
         $amount          = 10;
         $requestParams   = $this->getRequestParams($amount, $testPayment);
         $testOpsResponse = $this->returnValue(
-                                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_PROCESSED_MERCHANT)
+                                array('STATUS' => Netresearch_OPS_Model_Status::REFUND_PROCESSED_BY_MERCHANT)
         );
         $this->mockApiDirectLink($requestParams, $testOpsResponse);
-        
+        $this->testObject->setInfoInstance($testPayment);
         $this->testObject->refund($testPayment, $amount);
 
     }
@@ -88,13 +80,13 @@ class Netresearch_OPS_Test_Model_Payment_AbstractRefundTest extends EcomDev_PHPU
         $amount          = 10;
         $requestParams   = $this->getRequestParams($amount, $testPayment);
         $testOpsResponse = $this->returnValue(
-                                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED)
+                                array('STATUS' => 500)
         );
         $this->mockApiDirectLink($requestParams, $testOpsResponse);
 
         $statusUpdateMock = $this->getModelMock('ops/status_update', array('updateStatusFor'));
         $this->replaceByMock('model', 'ops/status_update', $statusUpdateMock);
-
+        $this->testObject->setInfoInstance($testPayment);
         $this->testObject->refund($testPayment, $amount);
     }
 
@@ -114,7 +106,7 @@ class Netresearch_OPS_Test_Model_Payment_AbstractRefundTest extends EcomDev_PHPU
 
         $statusUpdateMock = $this->getModelMock('ops/status_update', array('updateStatusFor'));
         $this->replaceByMock('model', 'ops/status_update', $statusUpdateMock);
-
+        $this->testObject->setInfoInstance($testPayment);
         $this->testObject->refund($testPayment, $amount);
     }
 
@@ -155,11 +147,13 @@ class Netresearch_OPS_Test_Model_Payment_AbstractRefundTest extends EcomDev_PHPU
     /**
      * @return array
      */
-    protected function preparePayment($order)
+    protected function preparePayment($order, $method = 'ops_cc')
     {
         $payment = Mage::getModel('sales/order_payment');
         $payment->setOrder($order);
+        $order->setPayment($payment);
         $payment->setAdditionalInformation('paymentId', 'payID');
+        $payment->setMethod($method);
 
         return $payment;
     }
@@ -218,4 +212,3 @@ class Netresearch_OPS_Test_Model_Payment_AbstractRefundTest extends EcomDev_PHPU
         $this->replaceByMock('helper', 'ops/payment', $helperMock);
     }
 }
- 

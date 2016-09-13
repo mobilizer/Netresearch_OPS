@@ -10,38 +10,18 @@
 class Netresearch_OPS_Model_Payment_InterSolve
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'InterSolve';
+    protected $brand = 'InterSolve';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
     /** info source path */
     protected $_infoBlockType = 'ops/info_redirect';
+    protected $_formBlockType = 'ops/form_interSolve';
 
     /** payment code */
     protected $_code = 'ops_interSolve';
-
-    protected function getPayment($payment=null)
-    {
-        if (is_null($payment)) {
-            $checkout = Mage::getSingleton('checkout/session');
-            $payment = $checkout->getQuote()->getPayment();
-            if (!$payment->getId()) {
-                $payment = Mage::getModel('sales/order')
-                    ->loadByIncrementId($checkout->getLastRealOrderId())
-                    ->getPayment();
-            }
-        }
-        return $payment;
-    }
-
-    public function getOpsCode($payment = null)
-    {
-        return 'InterSolve';
-    }
-
-    public function getOpsBrand($payment=null)
-    {
-        return trim($this->getPayment($payment)->getAdditionalInformation('BRAND'));
-    }
 
     /**
      * Assign data to info model instance

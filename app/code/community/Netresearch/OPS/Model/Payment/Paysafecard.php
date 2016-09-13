@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_Paysafecard
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'paysafecard';
+    protected $brand = 'paysafecard';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -18,5 +21,6 @@ class Netresearch_OPS_Model_Payment_Paysafecard
 
     /** payment code */
     protected $_code = 'ops_paysafecard';
+
 }
 

@@ -12,11 +12,11 @@ class Netresearch_OPS_Adminhtml_OpsstatusController extends Mage_Adminhtml_Contr
 
     protected function _isAllowed()
     {
-        return Mage::getSingleton('admin/session')->isAllowed('sales/order/invoice/create');
+        return Mage::getSingleton('admin/session')->isAllowed('sales/order/actions/invoice');
     }
 
     /**
-     * performs the status update call to Ingenico Payment Services
+     * performs the status update call to PayEngine
      */
     public function updateAction()
     {

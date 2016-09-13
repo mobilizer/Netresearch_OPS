@@ -46,13 +46,13 @@
 
     <?php if (0 < strlen($this->getSupportMail())): ?>
         <tr>
-            <td class=label><?php echo $this->__('Need support? Contact Ingenico Payment Services:'); ?></td>
+            <td class=label><?php echo $this->__('Need support? Contact PayEngine:'); ?></td>
             <?php
             $bodyInfo = array(
                 '',
                 '===',
                 'Magento version: ' . $this->getMageVersion(),
-                'Ingenico Payment Services app version: ' . $this->getExtensionVersion(),
+                'PayEngine app version: ' . $this->getExtensionVersion(),
                 'Shop URI: ' . Mage::getBaseUrl()
             );
             ?>

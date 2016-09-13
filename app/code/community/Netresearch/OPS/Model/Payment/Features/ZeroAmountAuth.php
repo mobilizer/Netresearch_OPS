@@ -28,6 +28,7 @@ class Netresearch_OPS_Model_Payment_Features_ZeroAmountAuth
             && $opsPaymentMethod instanceof Netresearch_OPS_Model_Payment_Cc
             && $opsPaymentMethod->isZeroAmountAuthorizationAllowed($storeId)
             && 0 < $quote->getItemsCount()
+            && !$quote->isNominal()
 
         ) {
             $result = true;

@@ -38,26 +38,6 @@ class Netresearch_OPS_Helper_Order extends Mage_Core_Helper_Abstract
         return $this->dataHelper;
     }
 
-    /**
-     * @param null $statusMappingModel
-     */
-    public function setStatusMappingModel(Netresearch_OPS_Model_Status_Mapping $statusMappingModel)
-    {
-        $this->statusMappingModel = $statusMappingModel;
-    }
-
-    /**
-     * @return null
-     */
-    public function getStatusMappingModel()
-    {
-        if (null == $this->statusMappingModel) {
-            $this->statusMappingModel = Mage::getModel('ops/status_mapping');
-        }
-
-        return $this->statusMappingModel;
-    }
-
     protected $dataHelper = null;
 
 
@@ -78,21 +58,34 @@ class Netresearch_OPS_Helper_Order extends Mage_Core_Helper_Abstract
     /**
      * generates the OPS order id in dependency to the config
      *
-     * @param Mage_Sales_Order $order
-     * @param                  $useOrderIdIfPossible if false forces the usage of quoteid (for Kwixo pm etc.)
+     * @param mixed $salesObject
+     * @param bool  $useOrderIdIfPossible if false forces the usage of quoteid (for Kwixo pm etc.)
      *
      * @return string
      */
-    public function getOpsOrderId($order, $useOrderIdIfPossible = true)
+    public function getOpsOrderId($salesObject, $useOrderIdIfPossible = true)
     {
-        $config    = $this->getConfig();
+        $config = $this->getConfig();
         $devPrefix = $config->getConfigData('devprefix');
-        $orderRef  = $order->getQuoteId();
-        if ($config->getOrderReference($order->getStoreId())
+        if ($salesObject instanceof Mage_Sales_Model_Order) {
+            /** @var $salesObject Mage_Sales_Model_Order */
+            $orderRef = $salesObject->getQuoteId();
+        } elseif ($salesObject instanceof Mage_Sales_Model_Quote) {
+            /** @var $salesObject Mage_Sales_Model_Quote */
+            $orderRef = $salesObject->getId();
+        }
+
+        if ($config->getOrderReference($salesObject->getStoreId())
             == Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID
             && $useOrderIdIfPossible === true
         ) {
-            $orderRef = self::DELIMITER . $order->getIncrementId();
+            if ($salesObject instanceof Mage_Sales_Model_Quote) {
+                $salesObject->reserveOrderId();
+                $orderRef = self::DELIMITER . $salesObject->getReservedOrderId();
+            } elseif ($salesObject instanceof Mage_Sales_Model_Order) {
+                $orderRef = self::DELIMITER . $salesObject->getIncrementId();
+            }
+
         }
 
         return $devPrefix . $orderRef;
@@ -108,17 +101,19 @@ class Netresearch_OPS_Helper_Order extends Mage_Core_Helper_Abstract
      */
     public function getOrder($opsOrderId)
     {
-        $order         = null;
+        $order = null;
         $fieldToFilter = 'quote_id';
-        $devPrefix     = $this->getConfig()->getConfigData('devprefix');
+        $devPrefix = $this->getConfig()->getConfigData('devprefix');
         if ($devPrefix == substr($opsOrderId, 0, strlen($devPrefix))) {
             $opsOrderId = substr($opsOrderId, strlen($devPrefix));
         }
         // opsOrderId was created from order increment id, use increment id for filtering
         if (0 === strpos($opsOrderId, self::DELIMITER)) {
-            $opsOrderId    = substr($opsOrderId, strlen(self::DELIMITER));
+            $opsOrderId = substr($opsOrderId, strlen(self::DELIMITER));
             $fieldToFilter = 'increment_id';
         }
+
+
         /* @var $order Mage_Sales_Model_Resource_Order_Collection */
         $order = Mage::getModel('sales/order')->getCollection()
                      ->addFieldToFilter($fieldToFilter, $opsOrderId)
@@ -152,8 +147,8 @@ class Netresearch_OPS_Helper_Order extends Mage_Core_Helper_Abstract
      */
     public function checkIfAddressesAreSame(Mage_Sales_Model_Order $order)
     {
-        $addMatch            = 0;
-        $billingAddressHash  = null;
+        $addMatch = 0;
+        $billingAddressHash = null;
         $shippingAddressHash = null;
         if ($order->getBillingAddress() instanceof Mage_Customer_Model_Address_Abstract) {
             $billingAddressHash = Mage::helper('ops/alias')->generateAddressHash(
@@ -173,26 +168,4 @@ class Netresearch_OPS_Helper_Order extends Mage_Core_Helper_Abstract
         return $addMatch;
     }
 
-    /**
-     * checks if the order's state is valid for the according Ingenico Payment Services's status. If not the order's state is reset
-     * to it's previous state
-     *
-     * @param Mage_Sales_Model_Order $order
-     *
-     * @return $this
-     */
-    public function checkForOpsStateOnStatusUpdate(Mage_Sales_Model_Order $order)
-    {
-        $opsStatus      = $order->getPayment()->getAdditionalInformation('status');
-        $opsOrderStates = $this->getStatusMappingModel()->getStatusForOpsStatus($opsStatus);
-        $origData       = $order->getOrigData();
-        if (0 < count($opsOrderStates) && !in_array($order->getStatus(), $opsOrderStates)) {
-            $comment = $this->getDataHelper()->__(
-                'revert state update to it\'s original one because of Ingenico Payment Services\'s state restriction'
-            );
-            $order->addStatusHistoryComment($comment, $origData['status']);
-        }
-
-        return $this;
-    }
 }

@@ -78,4 +78,10 @@ class Netresearch_OPS_Adminhtml_KwixoshippingController
         $this->_redirect('adminhtml/kwixoshipping/index');
     }
 
-} 
+    protected function _isAllowed()
+    {
+        return Mage::getSingleton('admin/session')->isAllowed('sales/shipment');
+    }
+
+
+}

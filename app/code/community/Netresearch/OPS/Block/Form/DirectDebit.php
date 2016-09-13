@@ -15,16 +15,12 @@ class Netresearch_OPS_Block_Form_DirectDebit extends Netresearch_OPS_Block_Form
     /**
      * Backend Payment Template
      */
-    const BACKEND_TEMPLATE = 'ops/form/directDebit.phtml';
+    const TEMPLATE = 'ops/form/directDebit.phtml';
 
     protected function _construct()
     {
         parent::_construct();
-
-        //Only in case that the form is loaded in the backend, use a special template
-        if (false === Mage::getModel("ops/config")->isFrontendEnvironment()) {
-            $this->setTemplate(self::BACKEND_TEMPLATE);
-        }
+        $this->setTemplate(self::TEMPLATE);
     }
 
     /**
@@ -216,10 +212,11 @@ class Netresearch_OPS_Block_Form_DirectDebit extends Netresearch_OPS_Block_Form
 
     /**
      * gets the previously entered card holder (if any)
+     * @param $aliasId - not used, but required by parent methods
      *
      * @return string - empty string if no card holder is given, otherwise the card holder
      */
-    public function getCardholderName()
+    public function getCardholderName($aliasId = null)
     {
         $cardholder = '';
         if (array_key_exists('CN', $this->previousParams)) {
@@ -227,5 +224,10 @@ class Netresearch_OPS_Block_Form_DirectDebit extends Netresearch_OPS_Block_Form
         }
 
         return $cardholder;
+    }
+
+    public function getRegisterDirectDebitPaymentUrl()
+    {
+        return Mage::getModel('ops/config')->getRegisterDirectDebitPaymentUrl();
     }
 }

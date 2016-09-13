@@ -5,53 +5,6 @@ Event.observe(window, 'load', function() {
     payment.formOneStepCheckout = $('onestepcheckout-form');
     payment.holdOneStepCheckout = true;
 
-    $('onestepcheckout-form').submit = $('onestepcheckout-form').submit.wrap(function(originalSubmitMethod) {
-        new Ajax.Request(opsValidationUrl, {
-            method: 'get',
-            onSuccess: function(transport) {
-                response = {};
-                if (transport && transport.responseText){
-                    try{
-                        response = eval('(' + transport.responseText + ')');
-                    }
-                    catch (e) {
-                        response = {};
-                    }
-                }
-                if (!response.opsError) {
-                    originalSubmitMethod();
-                }
-                if (response.error) {
-                    opsValidationFields = payment.opsValidationFields.evalJSON(true);
-                    errorneousFields = response.fields;
-                    for(key in errorneousFields) {
-                        if ($(key)) {
-                            if (opsValidationFields[key]) {
-                                $(key).removeClassName('validation-passed');
-                                $(key).addClassName('validate-string-length');
-                                $(key).addClassName('maximum-length-' + opsValidationFields[key]);
-                            }
-                            if(errorneousFields[key]) {
-                                Validation.ajaxError($(key), errorneousFields[key]);
-                            }
-
-                        }
-                    }
-                    var submitelement = $('onestepcheckout-place-order');
-                    if (submitelement.parentNode.lastChild.hasClassName('onestepcheckout-place-order-loading')) {
-                        submitelement.parentNode.lastChild.remove();
-                    }
-                    already_placing_order = false;
-                    submitelement.removeClassName('grey').addClassName('orange');
-                    submitelement.disabled = false;
-
-                    return;
-                }
-                originalSubmitMethod();
-            }
-        });
-    });
-
     if(payment.isOneStepCheckout){
 
         //set the form element

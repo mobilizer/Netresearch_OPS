@@ -29,7 +29,8 @@ class Netresearch_OPS_Test_Model_Payment_InterSolveTest extends EcomDev_PHPUnit_
 
     public function testPm()
     {
-        $this->assertEquals('InterSolve', Mage::getModel('ops/payment_interSolve')->getOpsCode());
+        $payment = Mage::getModel('payment/info');
+        $this->assertEquals('InterSolve', Mage::getModel('ops/payment_interSolve')->getOpsCode($payment));
     }
 
     public function testBrand()

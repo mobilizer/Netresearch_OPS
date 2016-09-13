@@ -2,6 +2,28 @@
 class Netresearch_OPS_Test_Controller_Adminhtml_KwixocategoryControllerTest
     extends EcomDev_PHPUnit_Test_Case_Controller
 {
+    public function setUp()
+    {
+        parent::setUp();
+        $fakeUser = $this->getModelMock('admin/user', array('getId', 'getRole'));
+        $fakeUser->expects($this->any())
+                 ->method('getId')
+                 ->will($this->returnValue(1));
+
+        $sessionMock = $this->getModelMock(
+            'admin/session', array('getUser', 'init', 'save', 'isAllowed')
+        );
+        $sessionMock->expects($this->any())
+                    ->method('getUser')
+                    ->will($this->returnValue($fakeUser));
+
+        $sessionMock->expects($this->any())
+                    ->method('isAllowed')
+                    ->will($this->returnValue(true));
+
+        $this->replaceByMock('singleton', 'admin/session', $sessionMock);
+    }
+
 
     /**
      * @loadFixture category_mapping

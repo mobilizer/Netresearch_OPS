@@ -164,6 +164,15 @@ class Netresearch_OPS_Test_Helper_DirectDebitTest
      */
     public function testGetDirectLinkRequestParams()
     {
+
+        $store = Mage::app()->getStore(0)->load(0);
+        $store->resetConfig();
+
+        $store->setConfig(
+            'payment_services/ops/inlineOrderReference',
+            Netresearch_OPS_Model_Payment_Abstract::REFERENCE_QUOTE_ID
+        );
+
         $quote      = Mage::getModel('sales/quote')->load(10);
         $order      = Mage::getModel('sales/order')->load(11);
         $dataHelper = $this->getHelperMock('ops/data', array('isAdminSession'));
@@ -470,6 +479,7 @@ class Netresearch_OPS_Test_Helper_DirectDebitTest
             'OWNERTELNO'                    => NULL,
             'OWNERCTY'                      => "DE",
             'ADDMATCH'                      => 1,
+            'RTIMEOUT'                      => 45,
             'ECOM_SHIPTO_POSTAL_POSTALCODE' => "04229",
             'ECOM_BILLTO_POSTAL_POSTALCODE' => "04229",
             'ORIG'                          => Mage::helper("ops")->getModuleVersionString(),

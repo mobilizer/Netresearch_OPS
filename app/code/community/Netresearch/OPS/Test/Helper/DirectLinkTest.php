@@ -1,5 +1,6 @@
 <?php
-class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Case
+class Netresearch_OPS_Test_Helper_DirectLinkTest
+    extends Netresearch_OPS_Test_Model_Response_TestCase
 {
     public function setUp()
     {
@@ -18,18 +19,19 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
 
     public function testDeleteActions()
     {
-        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=>Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED)));
-        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=>Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED_WAITING)));
-        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=>Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED_UNCERTAIN)));
-        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=>Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED_REFUSED)));
-        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=>Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED_OK)));
-        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=>Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED_PROCESSED_MERCHANT)));
+        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=> Netresearch_OPS_Model_Status::PAYMENT_DELETED)));
+        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=> Netresearch_OPS_Model_Status::PAYMENT_DELETION_PENDING)));
+        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=> Netresearch_OPS_Model_Status::PAYMENT_DELETION_UNCERTAIN)));
+        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=> Netresearch_OPS_Model_Status::PAYMENT_DELETION_REFUSED)));
+        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=> Netresearch_OPS_Model_Status::PAYMENT_DELETION_OK)));
+        $this->assertFalse($this->_helper->isValidOpsRequest($this->_transaction, $this->_order, array('STATUS'=> Netresearch_OPS_Model_Status::DELETION_HANDLED_BY_MERCHANT)));
     }
 
     public function testRefundActions()
     {
+
         $opsRequest = array(
-            'STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_REFUNDED,
+            'STATUS' => Netresearch_OPS_Model_Status::REFUNDED,
             'amount' => '184.90'
         );
         $this->assertFalse($this->_helper->isValidOpsRequest(null, $this->_order, $opsRequest), 'Refund should not be possible without open transactions');
@@ -41,7 +43,7 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
     public function testCancelActions()
     {
         $opsRequest = array(
-            'STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_VOIDED,
+            'STATUS' => Netresearch_OPS_Model_Status::AUTHORIZED_AND_CANCELLED,
             'amount' => '184.90'
         );
         $this->assertFalse($this->_helper->isValidOpsRequest(null, $this->_order, $opsRequest), 'Cancel should not be possible without open transactions');
@@ -53,7 +55,7 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
     public function testCaptureActions()
     {
         $opsRequest = array(
-            'STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REQUESTED,
+            'STATUS' => Netresearch_OPS_Model_Status::PAYMENT_REQUESTED,
             'amount' => '184.90'
         );
         $this->assertTrue($this->_helper->isValidOpsRequest(null, $this->_order, $opsRequest), 'Capture should be possible because of no open transactions and matching amount');
@@ -84,6 +86,7 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackCaptureSuccess()
     {
+        $this->mockEmailHelper($this->once());
 
         $order = Mage::getModel('sales/order')->load(11);
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
@@ -101,7 +104,7 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
             ->method('acceptCapture')
             ->will($this->returnCallback($closure));
         $this->replaceByMock('helper', 'ops/order_capture', $captureHelper);
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REQUESTED);
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::PAYMENT_REQUESTED);
         $directlinkHelperMock->processFeedback($order, $params);
         $this->assertEquals(9, $order->getPayment()->getAdditionalInformation('status'));
     }
@@ -111,6 +114,13 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackRefundSuccess()
     {
+        $this->mockEmailHelper($this->never());
+
+        $mock = $this->getModelMock('sales/order', array('getBillingAddress'));
+        $mock->expects($this->any())
+            ->method('getBillingAddress')
+            ->will($this->returnValue(new Varien_Object()));
+        $this->replaceByMock('model', 'sales/order', $mock);
 
         $order = Mage::getModel('sales/order')->load(11);
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
@@ -118,19 +128,7 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
             ->method('isValidOpsRequest')
             ->will($this->returnValue(true));
 
-
-
-        $closure = function ($order, $params = array()) {
-            $order->getPayment()->setAdditionalInformation('status', 8);
-            return $order->getPayment();
-        };
-
-        $refundHelper = $this->getHelperMock('ops/order_refund', array('createRefund'));
-        $refundHelper->expects($this->any())
-            ->method('createRefund')
-            ->will($this->returnCallback($closure));
-        $this->replaceByMock('helper', 'ops/order_refund', $refundHelper);
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_REFUNDED, 'PAYID' => '4711');
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::REFUNDED, 'PAYID' => '4711');
         $directlinkHelperMock->processFeedback($order, $params);
         $this->assertEquals($params['STATUS'], $order->getPayment()->getAdditionalInformation('status'));
     }
@@ -141,6 +139,8 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackRefundWithStatusEightyFiveSuccess()
     {
+        $this->mockEmailHelper($this->never());
+
         $order = Mage::getModel('sales/order')->load(11);
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
         $directlinkHelperMock->expects($this->any())
@@ -150,7 +150,9 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
 
 
         $closure = function ($order, $params = array()) {
-            $order->getPayment()->setAdditionalInformation('status', Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_PROCESSED_MERCHANT);
+            $order->getPayment()->setAdditionalInformation('status',
+                Netresearch_OPS_Model_Status::REFUND_PROCESSED_BY_MERCHANT
+            );
             return $order->getPayment();
         };
 
@@ -159,7 +161,7 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
             ->method('createRefund')
             ->will($this->returnCallback($closure));
         $this->replaceByMock('helper', 'ops/order_refund', $refundHelper);
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_PROCESSED_MERCHANT, 'PAYID' => '4711');
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::REFUND_PROCESSED_BY_MERCHANT, 'PAYID' => '4711');
         $directlinkHelperMock->processFeedback($order, $params);
         $this->assertEquals($params['STATUS'], $order->getPayment()->getAdditionalInformation('status'));
     }
@@ -169,6 +171,8 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackPaymentWaiting()
     {
+        $this->mockEmailHelper($this->once());
+
         /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load(11);
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
@@ -180,11 +184,13 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
 
 
         $closure = function ($order, $params = array()) {
-            $order->getPayment()->setAdditionalInformation('status', Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSING);
+            $order->getPayment()->setAdditionalInformation('status',
+                Netresearch_OPS_Model_Status::PAYMENT_PROCESSING
+            );
             return $order->getPayment();
         };
 
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSING, 'PAYID' => '4711');
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::PAYMENT_PROCESSING, 'PAYID' => '4711');
         $directlinkHelperMock->processFeedback($order, $params);
         $cntAfter = $order->getStatusHistoryCollection()->count();
         $this->assertTrue($cntBefore < $cntAfter);
@@ -195,6 +201,9 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackPaymentRefused()
     {
+        // mail sending is triggered but getEmailSent takes effect
+        $this->mockEmailHelper($this->once());
+
         /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load(11);
         $directlinkHelperMock = $this->getHelperMock(
@@ -208,24 +217,12 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
         $closure = function ($order, $params = array()) {
             $order->getPayment()->setAdditionalInformation(
                 'status',
-                Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REFUSED
+                Netresearch_OPS_Model_Status::PAYMENT_REFUSED
             );
             return $order->getPayment();
         };
 
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REFUSED, 'PAYID' => '4711');
-
-        $directlinkHelperMock->expects($this->once())
-            ->method('closePaymentTransaction')
-            ->with(
-                $order,
-                $params,
-                Netresearch_OPS_Model_Payment_Abstract::OPS_CAPTURE_TRANSACTION_TYPE,
-                Mage::helper('ops')->__(
-                    'Capture was refused. Automatic creation failed. Ingenico Payment Services status: %s.',
-                    Mage::helper('ops')->getStatusText($params['STATUS'])
-                )
-            );
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::PAYMENT_REFUSED, 'PAYID' => '4711');
 
         $directlinkHelperMock->processFeedback($order, $params);
     }
@@ -235,8 +232,17 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackRefundWaiting()
     {
+        $this->mockEmailHelper($this->never());
+
+        $paymentMock = $this->getModelMock('core/resource_transaction', array('save'));
+        $this->replaceByMock('model', 'core/resource_transaction', $paymentMock);
+
         /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load(11);
+
+        $creditMemo = $this->getModelMock('sales/order_creditmemo', array('_beforeSave'));
+        $order->getPayment()->setCreatedCreditMemo($creditMemo);
+        /** @var Netresearch_OPS_Helper_Directlink $directlinkHelperMock */
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
         $directlinkHelperMock->expects($this->any())
             ->method('isValidOpsRequest')
@@ -246,7 +252,9 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
 
 
         $closure = function ($order, $params = array()) {
-            $order->getPayment()->setAdditionalInformation('status', Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_WAITING);
+            $order->getPayment()->setAdditionalInformation('status',
+                Netresearch_OPS_Model_Status::REFUND_PENDING
+            );
             return $order->getPayment();
         };
 
@@ -255,7 +263,7 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
             ->method('createRefund')
             ->will($this->returnCallback($closure));
         $this->replaceByMock('helper', 'ops/order_refund', $refundHelper);
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_WAITING, 'PAYID' => '4711');
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::REFUND_PENDING, 'PAYID' => '4711');
         $directlinkHelperMock->processFeedback($order, $params);
         $cntAfter = $order->getStatusHistoryCollection()->count();
         $this->assertTrue($cntBefore < $cntAfter);
@@ -267,12 +275,19 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackRefundRefused()
     {
+        $this->mockEmailHelper($this->never());
+
+        $transMock = $this->getModelMock('core/resource_transaction', array('save'));
+        $this->replaceByMock('model', 'core/resource_transaction', $transMock);
+
         /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load(11);
         $directlinkHelperMock = $this->getHelperMock(
             'ops/directlink',
             array('isValidOpsRequest', 'closePaymentTransaction')
         );
+        $creditMemo = $this->getModelMock('sales/order_creditmemo', array('_beforeSave'));
+        $order->getPayment()->setCreatedCreditMemo($creditMemo);
         $directlinkHelperMock->expects($this->any())
             ->method('isValidOpsRequest')
             ->will($this->returnValue(true));
@@ -280,7 +295,7 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
         $closure = function ($order, $params = array()) {
             $order->getPayment()->setAdditionalInformation(
                 'status',
-                Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_WAITING
+                Netresearch_OPS_Model_Status::REFUND_PENDING
             );
             return $order->getPayment();
         };
@@ -290,21 +305,11 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
             ->method('createRefund')
             ->will($this->returnCallback($closure));
         $this->replaceByMock('helper', 'ops/order_refund', $refundHelper);
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_REFUSED, 'PAYID' => '4711');
-
-        $directlinkHelperMock->expects($this->once())
-            ->method('closePaymentTransaction')
-            ->with(
-                $order,
-                $params,
-                Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_TRANSACTION_TYPE,
-                Mage::helper('ops')->__(
-                    'Refund was refused. Automatic creation failed. Ingenico Payment Services status: %s.',
-                    Mage::helper('ops')->getStatusText($params['STATUS'])
-                )
-            );
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::REFUND_REFUSED, 'PAYID' => '4711');
 
         $directlinkHelperMock->processFeedback($order, $params);
+
+        $this->assertEquals(Netresearch_OPS_Model_Status::REFUND_REFUSED, $order->getPayment()->getAdditionalInformation('status'));
     }
 
     /**
@@ -312,6 +317,11 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackVoidSuccess()
     {
+        $this->mockEmailHelper($this->never());
+        $this->mockOrderConfig();
+
+        $transMock = $this->getModelMock('core/resource_transaction', array('save'));
+        $this->replaceByMock('model', 'core/resource_transaction', $transMock);
 
         $order = Mage::getModel('sales/order')->load(11);
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
@@ -331,7 +341,7 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
             ->method('acceptVoid')
             ->will($this->returnCallback($closure));
         $this->replaceByMock('helper', 'ops/order_void', $voidHelper);
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_VOIDED, 'PAYID' => '4711');
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::AUTHORIZED_AND_CANCELLED, 'PAYID' => '4711');
         $directlinkHelperMock->processFeedback($order, $params);
         $this->assertEquals($params['STATUS'], $order->getPayment()->getAdditionalInformation('status'));
     }
@@ -341,25 +351,19 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackVoidWaiting()
     {
+        $this->mockEmailHelper($this->never());
+
         /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load(11);
+        /** @var Netresearch_OPS_Helper_Directlink $directlinkHelperMock */
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
         $directlinkHelperMock->expects($this->any())
             ->method('isValidOpsRequest')
             ->will($this->returnValue(true));
 
-        $cntBefore = $order->getStatusHistoryCollection()->count();
-
-
-        $closure = function ($order, $params = array()) {
-            $order->getPayment()->setAdditionalInformation('status', Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_WAITING);
-            return $order->getPayment();
-        };
-
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_WAITING, 'PAYID' => '4711');
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::DELETION_WAITING, 'PAYID' => '4711');
         $directlinkHelperMock->processFeedback($order, $params);
-        $cntAfter = $order->getStatusHistoryCollection()->count();
-        $this->assertTrue($cntBefore < $cntAfter);
+        $this->assertNotEmpty($order->getPayment()->getMessage());
 
     }
 
@@ -368,11 +372,13 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackVoidRefused()
     {
+        $this->mockEmailHelper($this->never());
+
         /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load(11);
         $directlinkHelperMock = $this->getHelperMock(
             'ops/directlink',
-            array('isValidOpsRequest', 'closePaymentTransaction')
+            array('isValidOpsRequest')
         );
         $directlinkHelperMock->expects($this->any())
             ->method('isValidOpsRequest')
@@ -381,7 +387,7 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
         $closure = function ($order, $params = array()) {
             $order->getPayment()->setAdditionalInformation(
                 'status',
-                Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_REFUSED
+                Netresearch_OPS_Model_Status::DELETION_REFUSED
             );
             return $order->getPayment();
         };
@@ -391,19 +397,8 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
             ->method('acceptVoid')
             ->will($this->returnCallback($closure));
         $this->replaceByMock('helper', 'ops/order_void', $refundHelper);
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_REFUSED, 'PAYID' => '4711');
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::DELETION_REFUSED, 'PAYID' => '4711');
 
-        $directlinkHelperMock->expects($this->once())
-            ->method('closePaymentTransaction')
-            ->with(
-                $order,
-                $params,
-                Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_TRANSACTION_TYPE,
-                Mage::helper('ops')->__(
-                    'Void was refused. Automatic creation failed. Ingenico Payment Services status: %s.',
-                    Mage::helper('ops')->getStatusText($params['STATUS'])
-                )
-            );
 
         $directlinkHelperMock->processFeedback($order, $params);
     }
@@ -413,6 +408,10 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackAuthorizeChanged()
     {
+        // mail sending is triggered but getEmailSent takes effect
+        $this->mockEmailHelper($this->once());
+        $this->mockOrderConfig();
+
         /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load(11);
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
@@ -422,7 +421,7 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
 
         $cntBefore = $order->getStatusHistoryCollection()->count();
 
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED, 'PAYID' => '4711');
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::AUTHORIZED, 'PAYID' => '4711');
         $directlinkHelperMock->processFeedback($order, $params);
         $cntAfter = $order->getStatusHistoryCollection()->count();
         $this->assertTrue($cntBefore < $cntAfter);
@@ -434,6 +433,9 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
      */
     public function testProcessFeedbackAuthorizeKwixoAccepted()
     {
+        $this->mockEmailHelper($this->once());
+        $this->mockOrderConfig();
+
         /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load(27);
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
@@ -445,7 +447,8 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
 
 
         $closure = function ($order, $params = array()) {
-            $order->getPayment()->setAdditionalInformation('status', Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED);
+            $order->getPayment()->setAdditionalInformation('status', Netresearch_OPS_Model_Status::AUTHORIZED
+            );
             return $order->getPayment();
         };
 
@@ -455,16 +458,20 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
             ->will($this->returnCallback($closure));
         $this->replaceByMock('helper', 'ops/payment', $paymentHelper);
 
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED, 'PAYID' => '4711');
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::AUTHORIZED, 'PAYID' => '4711');
         $directlinkHelperMock->processFeedback($order, $params);
         $this->assertEquals($params['STATUS'], $order->getPayment()->getAdditionalInformation('status'));
     }
 
     /**
      * @loadFixture ../../../var/fixtures/orders.yaml
+     * @expectedException Mage_Core_Exception
+     * @expectedExceptionMessage Can not handle status 4711.
      */
     public function testProcessFeedbackUnknownStatus()
     {
+        $this->mockEmailHelper($this->never());
+
         /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load(11);
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
@@ -472,58 +479,66 @@ class Netresearch_OPS_Test_Helper_DirectLinkTest extends EcomDev_PHPUnit_Test_Ca
             ->method('isValidOpsRequest')
             ->will($this->returnValue(true));
 
-        $cntBefore = $order->getStatusHistoryCollection()->count();
 
         $params = array('STATUS' => 4711, 'PAYID' => '4711');
         $directlinkHelperMock->processFeedback($order, $params);
-        $cntAfter = $order->getStatusHistoryCollection()->count();
-        $this->assertTrue($cntBefore < $cntAfter);
 
     }
 
     /**
      * @loadFixture ../../../var/fixtures/orders.yaml
+     * @expectedException Mage_Core_Exception
+     * @expectedExceptionMessage  PayEngine status 0, the action failed.
      */
     public function testProcessFeedbackInvalidStatus()
     {
+        $helperMock = $this->getHelperMock('ops', array('isAdminSession', 'sendTransactionalEmail'));
+        $helperMock->expects($this->once())
+            ->method('isAdminSession')
+            ->will($this->returnValue(false));
+        $helperMock->expects($this->never())
+            ->method('sendTransactionalEmail');
+        $this->replaceByMock('helper', 'ops', $helperMock);
+
         /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load(11);
+        $order->getPayment()->setAdditionalInformation('status', 500);
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
         $directlinkHelperMock->expects($this->any())
             ->method('isValidOpsRequest')
             ->will($this->returnValue(true));
 
-        $cntBefore = $order->getStatusHistoryCollection()->count();
-
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_INVALID, 'PAYID' => '4711');
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::INVALID_INCOMPLETE, 'PAYID' => '4711');
         $directlinkHelperMock->processFeedback($order, $params);
-        $cntAfter = $order->getStatusHistoryCollection()->count();
-        $this->assertTrue($cntBefore === $cntAfter);
 
     }
 
     /**
      * @loadFixture ../../../var/fixtures/orders.yaml
+     * @expectedException Mage_Core_Exception
+     * @expectedExceptionMessage PayEngine status 0, the action failed.
      */
-    public function testIsNoValidOpsRequestWillThrowException()
+    public function testProcessFeedbackInvalidStatusAsAdmin()
     {
+        $helperMock = $this->getHelperMock('ops', array('isAdminSession', 'sendTransactionalEmail'));
+        $helperMock->expects($this->once())
+            ->method('isAdminSession')
+            ->will($this->returnValue(true));
+        $helperMock->expects($this->never())
+            ->method('sendTransactionalEmail');
+        $this->replaceByMock('helper', 'ops', $helperMock);
+
         /** @var Mage_Sales_Model_Order $order */
         $order = Mage::getModel('sales/order')->load(11);
+        $order->getPayment()->setAdditionalInformation('status', 500);
         $directlinkHelperMock = $this->getHelperMock('ops/directlink', array('isValidOpsRequest'));
         $directlinkHelperMock->expects($this->any())
             ->method('isValidOpsRequest')
-            ->will($this->returnValue(false));
+            ->will($this->returnValue(true));
 
-        $cntBefore = $order->getStatusHistoryCollection()->count();
+        $params = array('STATUS' => Netresearch_OPS_Model_Status::INVALID_INCOMPLETE, 'PAYID' => '4711');
+        $directlinkHelperMock->processFeedback($order, $params);
 
-        $params = array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_INVALID, 'PAYID' => '4711');
-        try {
-            $directlinkHelperMock->processFeedback($order, $params);
-        } catch (Mage_Core_Exception $e) {
-
-        }
-        $cntAfter = $order->getStatusHistoryCollection()->count();
-        $this->assertTrue($cntBefore < $cntAfter);
     }
 }
 

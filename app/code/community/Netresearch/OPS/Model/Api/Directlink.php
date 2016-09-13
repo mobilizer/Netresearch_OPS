@@ -52,7 +52,7 @@ class Netresearch_OPS_Model_Api_DirectLink extends Mage_Core_Model_Abstract
         } catch (Exception $e) {
             Mage::logException($e);
             Mage::throwException(
-                Mage::helper('ops')->__('Ingenico Payment Services server is temporarily not available, please try again later.')
+                Mage::helper('ops')->__('PayEngine server is temporarily not available, please try again later.')
             );
         }
      }
@@ -71,7 +71,7 @@ class Netresearch_OPS_Model_Api_DirectLink extends Mage_Core_Model_Abstract
             array_merge($requestParams,$this->buildAuthenticationParams($storeId)) //Merge Logic Operation Data with Authentication Data
         , null, $storeId);
         $responseParams = $this->getResponseParams($params, $url);
-        $helper->log($helper->__("Direct Link Request/Response in Ingenico Payment Services \n\nRequest: %s\nResponse: %s\nMagento-URL: %s\nAPI-URL: %s",
+        $helper->log($helper->__("Direct Link Request/Response in PayEngine \n\nRequest: %s\nResponse: %s\nMagento-URL: %s\nAPI-URL: %s",
             serialize($params),
             serialize($responseParams),
             Mage::helper('core/url')->getCurrentUrl(),
@@ -86,7 +86,8 @@ class Netresearch_OPS_Model_Api_DirectLink extends Mage_Core_Model_Abstract
 
      public function getEncodedParametersWithHash($params, $shaCode=null, $storeId)
      {
-        $params['SHASIGN'] = Mage::helper('ops/payment')->shaCrypt(iconv('iso-8859-1', 'utf-8', Mage::helper('ops/payment')->getSHASign($params, $shaCode, $storeId)));
+         $hash = Mage::helper('ops/payment')->getSHASign($params, $shaCode, $storeId);
+         $params['SHASIGN'] = Mage::helper('ops/payment')->shaCrypt(iconv('iso-8859-1', 'utf-8', $hash));
 
         return $params;
      }
@@ -100,7 +101,7 @@ class Netresearch_OPS_Model_Api_DirectLink extends Mage_Core_Model_Abstract
       * @param array $params - request params
       * @param string $url - the url for the request
       * @param int $retryCount - current request count
-      * @return array | null - null if requests were not successful, array containing Ingenico Payment Services payment data otherwise
+      * @return array | null - null if requests were not successful, array containing PayEngine payment data otherwise
       * 
       */
      protected function getResponseParams($params, $url, $retryCount = 0)
@@ -128,7 +129,7 @@ class Netresearch_OPS_Model_Api_DirectLink extends Mage_Core_Model_Abstract
                 }
             }
          } else {
-             Mage::throwException(Mage::helper('ops')->__('An error occured during the Ingenico Payment Services request. Your action could not be executed.'));
+             Mage::throwException(Mage::helper('ops')->__('An error occured during the PayEngine request. Your action could not be executed.'));
          }
          return $responseParams;
      }
@@ -190,7 +191,7 @@ class Netresearch_OPS_Model_Api_DirectLink extends Mage_Core_Model_Abstract
             }
             
             Mage::throwException(
-                Mage::helper('ops')->__('An error occured during the Ingenico Payment Services request. Your action could not be executed. Message: "%s".',$responseParams['NCERRORPLUS'])
+                Mage::helper('ops')->__("An error occured during the PayEngine request. Your action could not be executed. Message: '%s.'",$responseParams['NCERRORPLUS'])
             );
          }
      }

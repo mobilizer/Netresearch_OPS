@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Netresearch_OPS_Model_Payment_Cc
  *
@@ -9,6 +10,8 @@
  */
 class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_DirectLink
 {
+    const CODE = 'ops_cc';
+
     /** info source path */
     protected $_infoBlockType = 'ops/info_cc';
 
@@ -16,12 +19,13 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
     protected $_formBlockType = 'ops/form_cc';
 
     /** payment code */
-    protected $_code = 'ops_cc';
+    protected $_code = self::CODE;
 
     protected $featureModel = null;
 
+
     /** ops payment code */
-    public function getOpsCode($payment=null)
+    public function getOpsCode($payment = null)
     {
         $opsBrand = $this->getOpsBrand($payment);
         if ('PostFinance card' == $opsBrand) {
@@ -30,14 +34,16 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
         if ('UNEUROCOM' == $this->getOpsBrand($payment)) {
             return 'UNEUROCOM';
         }
+
         return 'CreditCard';
     }
 
     /**
      * @param null $payment
+     *
      * @return array|mixed|null
      */
-    public function getOpsBrand($payment=null)
+    public function getOpsBrand($payment = null)
     {
         if (is_null($payment)) {
             $payment = Mage::getSingleton('checkout/session')->getQuote()->getPayment();
@@ -46,14 +52,26 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
         return $payment->getAdditionalInformation('CC_BRAND');
     }
 
-    public function getOrderPlaceRedirectUrl($payment=null)
+    /**
+     * If payment is inline there should be no orderPlaceRedirectUrl except for 3d secure cards - if order was placed
+     * through admin it is definitely an inline payment.
+     *
+     * @param Mage_Sales_Model_Order_Payment $payment
+     *
+     * @return bool|string
+     */
+    public function getOrderPlaceRedirectUrl($payment = null)
     {
-        if ($this->hasBrandAliasInterfaceSupport($payment)) {
-            if ('' == $this->getOpsHtmlAnswer($payment))
-                return false; // Prevent redirect on cc payment
-            else
-                return Mage::getModel('ops/config')->get3dSecureRedirectUrl();
+        $salesObject = $this->getInfoInstance()->getOrder() ? : $this->getInfoInstance()->getQuote();
+        if ($this->hasBrandAliasInterfaceSupport($payment) || is_null($salesObject->getRemoteIp())) {
+            if ('' == $this->getOpsHtmlAnswer($payment)) {
+                return false;
+            } // Prevent redirect on cc payment
+            else {
+                return $this->getConfig()->get3dSecureRedirectUrl();
+            }
         }
+
         return parent::getOrderPlaceRedirectUrl();
     }
 
@@ -64,7 +82,8 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
      */
     public function getBrandsForAliasInterface()
     {
-        $brands = Mage::getModel('ops/config')->getInlinePaymentCcTypes();
+        $brands = $this->getConfig()->getInlinePaymentCcTypes($this->getCode());
+
         return $brands;
     }
 
@@ -73,9 +92,9 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
      *
      * @param Mage_Payment_Model_Info $payment
      *
-     * @return void
+     * @return bool
      */
-    public function hasBrandAliasInterfaceSupport($payment=null)
+    public function hasBrandAliasInterfaceSupport($payment = null)
     {
         return in_array(
             $this->getOpsBrand($payment),
@@ -83,13 +102,12 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
         );
     }
 
-    /* --------------------------- OGNH-7 ---------------------------------------------------- */
-
-
     /**
      * Validates alias for in quote provided addresses
+     *
      * @param Mage_Sales_Model_Quote $quote
-     * @param Varien_Object $payment
+     * @param Varien_Object          $payment
+     *
      * @throws Mage_Core_Exception
      */
     protected function validateAlias($quote, $payment)
@@ -103,14 +121,14 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
                 $quote->getBillingAddress(),
                 $quote->getShippingAddress(),
                 $quote->getStoreId()
-            )) {
+            )
+        ) {
             $this->getOnepage()->getCheckout()->setGotoSection('payment');
             Mage::throwException(
                 $this->getHelper()->__('Invalid payment information provided!')
             );
         }
     }
-
 
     /**
      * @return Netresearch_OPS_Helper_Creditcard
@@ -125,10 +143,11 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
     }
 
 
-    protected function performPreDirectLinkCallActions(Mage_Sales_Model_Quote $quote, Varien_Object $payment, $requestParams = array())
-    {
+    protected function performPreDirectLinkCallActions(Mage_Sales_Model_Quote $quote, Varien_Object $payment,
+        $requestParams = array()
+    ) {
         Mage::helper('ops/alias')->cleanUpAdditionalInformation($payment, true);
-        if (true === Mage::getModel('ops/config')->isAliasManagerEnabled()) {
+        if (true === Mage::getModel('ops/config')->isAliasManagerEnabled($this->getCode())) {
             $this->validateAlias($quote, $payment);
         }
 
@@ -148,17 +167,6 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
     }
 
 
-//    public function getConfigPaymentAction()
-//    {
-//        return Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE_CAPTURE;
-//    }
-
-
-
-
-
-/* =============================================== END OGNH-7 ======================================= */
-
     /**
      * returns allow zero amount authorization
      * only TRUE if configured payment action for the store is authorize
@@ -173,8 +181,7 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
         if (
             $this->getConfig()->getPaymentAction($storeId) == Netresearch_OPS_Model_Payment_Abstract::ACTION_AUTHORIZE
             && true == Mage::getStoreConfig('payment/ops_cc/zero_amount_checkout', $storeId)
-        )
-        {
+        ) {
             $result = true;
         }
 
@@ -182,13 +189,12 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
     }
 
 
-
     /**
      * method was implemented in CE 1.8 / EE 1.14
      * if Version is CE 1.8 / EE 1.14 use parent method otherwise use our implementation
      *
      * @param Mage_Sales_Model_Quote $quote
-     * @param $checksBitMask
+     * @param                        $checksBitMask
      *
      * @return bool
      */
@@ -231,5 +237,41 @@ class Netresearch_OPS_Model_Payment_Cc extends Netresearch_OPS_Model_Payment_Dir
         }
     }
 
+    /**
+     * Check wether payment method is available for quote
+     *
+     * @param Mage_Sales_Model_Quote $quote
+     *
+     * @return bool
+     */
+    public function isAvailable($quote = null)
+    {
+        if (!is_null($quote) && !$quote->getItemsCount() > 0 && $this->getDataHelper()->isAdminSession()) {
+            /* Disable payment method in backend as long as there are no items in quote to
+            *  avoid problems with alias creation in EE1.12 & EE1.13
+            */
+            return false;
+        }
+
+        return parent::isAvailable($quote);
+    }
+
+    public function isInitializeNeeded()
+    {
+        return !$this->getPaymentHelper()->isInlinePayment($this->getInfoInstance());
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getMethodDependendFormFields($order, $requestParams = null)
+    {
+        $formFields = parent::getMethodDependendFormFields($order, $requestParams);
+        if ($this->getConfig()->getCreditDebitSplit($order->getStoreId())) {
+            $formFields['CREDITDEBIT'] = "C";
+        }
+
+        return $formFields;
+    }
 }
 

@@ -156,7 +156,7 @@ class Netresearch_OPS_Test_Controller_ApiControllerTest
         $this->replaceByMock('model', 'core/store', $modelMock);
         $this->dispatch('ops/api/postBack', $this->getRequestParams());
         $this->assertRedirectTo(
-            'ops/api/postBack', array('_query' => $this->getRequestParams(), '_store' => 1)
+            'ops/payment/accept', array('_query' => $this->getRequestParams(), '_store' => 1)
         );
 
 

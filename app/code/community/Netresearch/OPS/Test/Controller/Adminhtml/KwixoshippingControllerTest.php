@@ -23,24 +23,30 @@ class Netresearch_OPS_Test_Controller_Adminhtml_KwixoshippingControllerTest
             ->will($this->returnValue(1));
 
         $sessionMock = $this->getModelMock(
-            'admin/session', array('getUser', 'init', 'save')
+            'admin/session', array('getUser', 'init', 'save', 'isAllowed')
         );
         $sessionMock->expects($this->any())
             ->method('getUser')
             ->will($this->returnValue($fakeUser));
-        $this->replaceByMock('model', 'admin/session', $sessionMock);
 
+        $sessionMock->expects($this->any())
+                    ->method('isAllowed')
+                    ->will($this->returnValue(true));
+
+        $this->replaceByMock('singleton', 'admin/session', $sessionMock);
 
         $nodePath = "modules/Enterprise_AdminGws/active";
         if (Mage::helper('core/data')->isModuleEnabled('Enterprise_AdminGws')) {
             Mage::getConfig()->setNode($nodePath, 'false', true);
         }
 
+
     }
 
 
     public function testIndexAction()
     {
+
         $this->dispatch('adminhtml/kwixoshipping/index', array());
         $this->assertRequestRoute('adminhtml/kwixoshipping/index');
         $this->assertLayoutBlockCreated('kwixoshipping');

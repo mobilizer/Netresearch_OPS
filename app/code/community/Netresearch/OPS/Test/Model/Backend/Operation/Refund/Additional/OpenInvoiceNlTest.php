@@ -55,6 +55,11 @@ class Netresearch_OPS_Test_Model_Backend_Operation_Refund_Additional_OpenInvoice
                             ->setMethods(null)
                             ->getMock();
         $this->replaceByMock('singleton', 'checkout/session', $sessionMock);
+        $sessionMock = $this->getModelMockBuilder('customer/session')
+            ->disableOriginalConstructor()
+            ->setMethods(null)
+            ->getMock();
+        $this->replaceByMock('singleton', 'customer/session', $sessionMock);
     }
 
 

@@ -14,7 +14,7 @@ class Netresearch_OPS_Helper_Creditcard extends Netresearch_OPS_Helper_Payment_D
     protected $aliasHelper = null;
 
     /**
-     * @param null $aliasHelper
+     * @param Netresearch_OPS_Helper_Alias $aliasHelper
      */
     public function setAliasHelper($aliasHelper)
     {
@@ -22,7 +22,7 @@ class Netresearch_OPS_Helper_Creditcard extends Netresearch_OPS_Helper_Payment_D
     }
 
     /**
-     * @return null
+     * @return Netresearch_OPS_Helper_Alias
      */
     public function getAliasHelper()
     {
@@ -50,8 +50,11 @@ class Netresearch_OPS_Helper_Creditcard extends Netresearch_OPS_Helper_Payment_D
             $alias = $this->getAliasHelper()->getAlias($quote);
         }
         $params = array (
-            'ALIAS' => $alias,
+            'ALIAS' => $alias
         );
+        if($this->getConfig()->getCreditDebitSplit($quote->getStoreId())){
+            $params['CREDITDEBIT'] = 'C';
+        }
         if (is_numeric($quote->getPayment()->getAdditionalInformation('cvc'))) {
             $params['CVC'] = $quote->getPayment()->getAdditionalInformation('cvc');
         }

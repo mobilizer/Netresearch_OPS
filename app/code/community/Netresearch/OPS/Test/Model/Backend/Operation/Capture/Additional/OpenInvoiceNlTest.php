@@ -290,6 +290,11 @@ class Netresearch_OPS_Test_Model_Backend_Operation_Capture_Additional_OpenInvoic
                             ->setMethods(null)
                             ->getMock();
         $this->replaceByMock('singleton', 'adminhtml/session_quote', $sessionMock);
+        $sessionMock = $this->getModelMockBuilder('customer/session')
+            ->disableOriginalConstructor()
+            ->setMethods(null)
+            ->getMock();
+        $this->replaceByMock('singleton', 'customer/session', $sessionMock);
     }
 
     public function tearDown()

@@ -72,7 +72,7 @@ class Netresearch_OPS_Block_Adminhtml_Kwixo_Shipping_Edit
             'kwixo_shipping_speed' => '',
             'kwixo_shipping_details' => ''
         );
-        if ($this->hasData('postData') && array_key_exists($carrierCode, $this->getData('postData'))) {
+        if (!is_null($this->getData('postData')) && array_key_exists($carrierCode, $this->getData('postData'))) {
             $errorData = $this->getData('postData');
             $values =  $errorData[$carrierCode];
         } else {

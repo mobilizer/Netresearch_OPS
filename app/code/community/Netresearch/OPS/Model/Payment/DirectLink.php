@@ -1,12 +1,11 @@
 <?php
+
 /**
- * @author      Michael Lühr <michael.luehr@netresearch.de> 
+ * @author      Michael Lühr <michael.luehr@netresearch.de>
  * @category    Netresearch
  * @copyright   Copyright (c) 2014 Netresearch GmbH & Co. KG (http://www.netresearch.de)
  * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
-
-
 abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_Model_Payment_Abstract
 {
     /** Check if we can capture directly from the backend */
@@ -28,6 +27,9 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
     protected $validationFactory = null;
 
     protected $dataHelper = null;
+
+    protected $_isInitializeNeeded = false;
+
     /**
      * @param Netresearch_OPS_Helper_Payment_DirectLink_RequestInterface $requestParamsHelper
      */
@@ -62,7 +64,6 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
     }
 
 
-
     /**
      * @param Netresearch_OPS_Helper_Directlink $directLinkHelper
      */
@@ -79,6 +80,7 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
         if (null === $this->directLinkHelper) {
             $this->directLinkHelper = MAge::helper('ops/directlink');
         }
+
         return $this->directLinkHelper;
     }
 
@@ -103,8 +105,6 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
     }
 
 
-
-
     /**
      * @param null $config
      */
@@ -125,50 +125,9 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
         return $this->config;
     }
 
-
-
-
-    /**
-     * returns the payment action in dependency of the configuration quote id or order's increment id
-     *
-     * @return string
-     */
-    public function getConfigPaymentAction()
-    {
-        $paymentAction = '';
-
-        if ($this->getConfig()->getInlineOrderReference() == Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID
-            && $this->getConfig()->getPaymentAction() == Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE
-            && ($this instanceof Netresearch_OPS_Model_Payment_DirectDebit ||
-                ($this instanceof Netresearch_OPS_Model_Payment_Cc && $this->hasBrandAliasInterfaceSupport($this->getInfoInstance())))
-        ) {
-            $paymentAction = Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE;
-        }
-
-        if ($this->getConfig()->getInlineOrderReference() == Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID
-            && $this->getConfig()->getPaymentAction() == Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE_CAPTURE
-            && ($this instanceof Netresearch_OPS_Model_Payment_DirectDebit ||
-                ($this instanceof Netresearch_OPS_Model_Payment_Cc && $this->hasBrandAliasInterfaceSupport($this->getInfoInstance())))
-        ) {
-            $paymentAction = Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE_CAPTURE;
-        }
-
-        return $paymentAction;
-    }
-
-
-    public function isInitializeNeeded()
-    {
-        if ($this->getConfig()->getInlineOrderReference() == Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID) {
-            return false;
-        }
-
-        return true;
-    }
-
     /**
      * @param Varien_Object $payment
-     * @param float                          $amount
+     * @param float         $amount
      *
      * @return Mage_Payment_Model_Abstract|void
      */
@@ -185,23 +144,28 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
     }
 
     /**
-     * Saves the payment model and runs the request to Ingenico Payment Servicess webservice
+     * Saves the payment model and runs the request to PayEngines webservice
      *
      * @param Mage_Sales_Model_Order $order
      * @param Mage_Sales_Model_Quote $quote
-     * @param Varien_Object $payment
+     * @param Varien_Object          $payment
+     *
      * @throws Mage_Core_Exception
      */
 
-    protected function confirmPayment(Mage_Sales_Model_Order $order, Mage_Sales_Model_Quote $quote, Varien_Object $payment)
-    {
+    protected function confirmPayment(Mage_Sales_Model_Order $order, Mage_Sales_Model_Quote $quote,
+        Varien_Object $payment
+    ) {
         $this->handleAdminPayment($quote);
         $requestParams = $this->getRequestParamsHelper()->getDirectLinkRequestParams($quote, $order, $payment);
         $this->invokeRequestParamValidation($requestParams);
         $this->performPreDirectLinkCallActions($quote, $order);
-        $response = $this->getDirectLinkHelper()->performDirectLinkRequest($quote, $requestParams, $quote->getStoreId());
+        $response = $this->getDirectLinkHelper()->performDirectLinkRequest(
+            $quote, $requestParams, $quote->getStoreId()
+        );
         if ($response) {
-            $this->getPaymentHelper()->applyStateForOrder($order, $response);
+            $handler = Mage::getModel('ops/response_handler');
+            $handler->processResponse($response, $this, false);
             $this->performPostDirectLinkCallAction($quote, $order);
 
         } else {
@@ -213,6 +177,7 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
      * Handles backend payments on Magento side
      *
      * @param Mage_Sales_Model_Quote $quote
+     *
      * @return Netresearch_OPS_Model_Payment_DirectLink
      */
     abstract protected function handleAdminPayment(Mage_Sales_Model_Quote $quote);
@@ -224,29 +189,36 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
 
 
     /**
-     * Perform necessary preparation before request to Ingenico Payment Services is sent
+     * Perform necessary preparation before request to PayEngine is sent
      *
      * @param Mage_Sales_Model_Quote $quote
-     * @param Varien_Object $payment
-     * @param array $requestParams
+     * @param Varien_Object          $payment
+     * @param array                  $requestParams
+     *
      * @return Netresearch_OPS_Model_Payment_DirectLink
      */
-    abstract protected function performPreDirectLinkCallActions(Mage_Sales_Model_Quote $quote, Varien_Object $payment, $requestParams = array());
+    abstract protected function performPreDirectLinkCallActions(Mage_Sales_Model_Quote $quote, Varien_Object $payment,
+        $requestParams = array()
+    );
 
     /**
      * Perform necessary work after the Directlink Request was sent and an response was received and processed
      *
      * @param Mage_Sales_Model_Quote $quote
      * @param Mage_Sales_Model_Order $order
+     *
      * @return Netresearch_OPS_Model_Payment_DirectLink
      */
-    abstract protected function performPostDirectLinkCallAction(Mage_Sales_Model_Quote $quote, Mage_Sales_Model_Order $order);
+    abstract protected function performPostDirectLinkCallAction(Mage_Sales_Model_Quote $quote,
+        Mage_Sales_Model_Order $order
+    );
 
 
     /**
      * performs direct link request either for inline payments and direct sale mode or the normal maintenance call (invoice)
      *
      * @override
+     *
      * @param Varien_Object $payment
      * @param float         $amount
      *
@@ -258,14 +230,13 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
          * process direct sale inline payments (initial request)
          */
         if (Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE_CAPTURE == $this->getConfigPaymentAction()
-            && $this->getPaymentHelper()->isInlinePaymentWithOrderId($payment)
+            && $this->getPaymentHelper()->isInlinePayment($payment)
         ) {
             $order = $payment->getOrder();
             $quote = $this->getQuoteHelper()->getQuote();
             $this->confirmPayment($order, $quote, $payment);
-        }
-        /**
-         * invoice request authorize mode if the payment was placed on Ingenico Payment Services side
+        } /**
+         * invoice request authorize mode if the payment was placed on PayEngine side
          */
         elseif (0 < strlen(trim($payment->getAdditionalInformation('paymentId')))) {
             parent::capture($payment, $amount);
@@ -283,16 +254,18 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
     protected function isInlinePayment($payment)
     {
         $result = false;
-        $code = $payment->getMethodInstance()->getCode();
-        if (($code == 'ops_cc'
-                && $payment->getMethodInstance()
-                    ->hasBrandAliasInterfaceSupport(
-                        $payment
-                    ) || $this->getDataHelper()->isAdminSession()
-            ) || $code == 'ops_directDebit'
+
+        $methodInstance = $payment->getMethodInstance();
+        if ((
+                $methodInstance instanceof Netresearch_OPS_Model_Payment_Cc
+                && $methodInstance->hasBrandAliasInterfaceSupport($payment)
+                || $this->getDataHelper()->isAdminSession()
+            )
+            || $methodInstance instanceof Netresearch_OPS_Model_Payment_DirectDebit
         ) {
             $result = true;
         }
+
         return $result;
     }
 
@@ -322,7 +295,9 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
         );
         if (false == $validator->isValid($requestParams)) {
             $this->getOnepage()->getCheckout()->setGotoSection('payment');
-            Mage::throwException($this->getHelper()->__('The data you have provided can not be processed by Ingenico Payment Services'));
+            Mage::throwException(
+                $this->getHelper()->__('The data you have provided can not be processed by PayEngine')
+            );
         }
 
         return $this;
@@ -366,7 +341,8 @@ abstract class Netresearch_OPS_Model_Payment_DirectLink extends Netresearch_OPS_
         if (null === $this->dataHelper) {
             $this->dataHelper = Mage::helper('ops/data');
         }
+
         return $this->dataHelper;
     }
 
-} 
+}

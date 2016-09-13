@@ -55,9 +55,12 @@ Event.observe(window, 'load', function() {
         if (order.paymentMethod && order.paymentMethod.substr(0,3) == 'ops' && $('ops_iframe_ops_cc') && area) {
             var billing_methodIndex = area.indexOf('billing_method');
             if (billing_methodIndex > -1) {
-                area.splice(billing_methodIndex, 1);
+                order.stashOpsCcData();
             }
         }
+
+
+
         if (order.paymentMethod == 'ops_directDebit' && area == 'card_validation') {
             return;
         }
@@ -65,6 +68,37 @@ Event.observe(window, 'load', function() {
 
         originalLoadArea(area, indicator, params);
     });
+
+    order.stashOpsCcData = function() {
+        order.opsCcFormData={};
+
+        var doc = payment.getOpsCCIframeDocument();
+        var form = doc.forms[0];
+
+        order.opsCcFormData["CN"]                = form['CN'].value;
+        order.opsCcFormData["CARDNO"]            = form['CARDNO'].value;
+        order.opsCcFormData["CVC"]               = form['CVC'].value;
+        order.opsCcFormData["ED_MONTH_SELECTOR"] = form['ED_MONTH_SELECTOR'].value;
+        order.opsCcFormData["ED_YEAR_SELECTOR"]  = form['ED_YEAR_SELECTOR'].value;
+    };
+
+    payment.getOpsCCIframeDocument = function () {
+        var iframe = payment.getOpsCCIframe();
+        var doc = null;
+        if (iframe.contentDocument) {
+            doc = iframe.contentDocument;
+        } else if (iframe.contentWindow && iframe.contentWindow.document) {
+            doc = iframe.contentWindow.document;
+        } else if (iframe.document) {
+            doc = iframe.document;
+        }
+
+        return doc;
+    };
+
+    payment.getOpsCCIframe = function () {
+        return $('ops_iframe_ops_cc');
+    };
 
     order.submit = order.submit.wrap(function (originalSubmitMethod) {
         if ('ops_directDebit' == order.paymentMethod) {
@@ -76,27 +110,15 @@ Event.observe(window, 'load', function() {
             return originalSubmitMethod();
         }
         order.originalSubmitMethod = originalSubmitMethod;
-        var iframe = $('ops_iframe_ops_cc');
+        var iframe = payment.getOpsCCIframe();
         if (iframe == null || "undefined" == typeof(iframe))  {
             return originalSubmitMethod();
         }
 
-        var doc = null;
-
-        if(iframe.contentDocument) {
-            doc = iframe.contentDocument;
-        } else if(iframe.contentWindow && iframe.contentWindow.document) {
-            doc = iframe.contentWindow.document;
-        } else if(iframe.document) {
-            doc = iframe.document;
-        }
+        var doc = payment.getOpsCCIframeDocument();
         var form = doc.forms[0];
 
-        order.opsCcFormData["CN"]                = form['CN'].value;
-        order.opsCcFormData["CARDNO"]            = form['CARDNO'].value;
-        order.opsCcFormData["CVC"]               = form['CVC'].value;
-        order.opsCcFormData["ED_MONTH_SELECTOR"] = form['ED_MONTH_SELECTOR'].value;
-        order.opsCcFormData["ED_YEAR_SELECTOR"]  = form['ED_YEAR_SELECTOR'].value;
+        order.stashOpsCcData();
 
         new Ajax.Request(opsHashUrl, {
             method: 'get',
@@ -124,7 +146,7 @@ Event.observe(window, 'load', function() {
         });
     });
 
-    order.opsCcFormData=[];
+
 
     order.processOpsResponse = function(timeOffset) {
         try {

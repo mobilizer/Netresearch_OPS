@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_KbcOnline
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'KBC Online';
+    protected $brand = 'KBC Online';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -19,10 +22,5 @@ class Netresearch_OPS_Model_Payment_KbcOnline
     /** payment code */
     protected $_code = 'ops_kbcOnline';
 
-    /** ops payment code */
-    public function getOpsCode($payment=null)
-    {
-        return 'KBC Online';
-    }
 }
 

@@ -49,7 +49,7 @@ class Netresearch_OPS_Model_Payment_DirectEbanking
 
         $brand = $this->fixSofortUberweisungBrand($brand);
 
-        $payment = $this->getPayment();
+        $payment = $this->getInfoInstance();
         // brand == pm for all DirectEbanking methods
         $payment->setAdditionalInformation('PM',    $brand);
         $payment->setAdditionalInformation('BRAND', $brand);

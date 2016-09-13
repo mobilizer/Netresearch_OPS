@@ -14,10 +14,9 @@
  * @copyright  Copyright (c) 2013 Netresearch GmbH & Co. KG
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
-
 class Netresearch_OPS_Model_Observer
 {
-    
+
     /**
      * Get one page checkout model
      *
@@ -39,15 +38,25 @@ class Netresearch_OPS_Model_Observer
         if ($this->getAdminSession()->getUser()) {
             return 0 < $this->getAdminSession()->getUser()->getUserId();
         }
+
         return false;
     }
 
-    public function getHelper($name=null)
+    public function getHelper($name = null)
     {
         if (is_null($name)) {
             return Mage::helper('ops');
         }
+
         return Mage::helper('ops/' . $name);
+    }
+
+    /**
+     * @return Netresearch_OPS_Model_Config
+     */
+    public function getConfig()
+    {
+        return Mage::getModel('ops/config');
     }
 
     /**
@@ -60,116 +69,20 @@ class Netresearch_OPS_Model_Observer
         $code = $quote->getPayment()->getMethodInstance()->getCode();
 
         try {
-            if ('ops_cc' == $code 
-                && Mage::helper('ops/payment')->isInlinePaymentWithQuoteId($quote->getPayment())
-                && true === Mage::getModel('ops/config')->isAliasManagerEnabled()
-                && false === $this->isAdminSession()
-                ) {
-                $alias = $quote->getPayment()->getAdditionalInformation('alias');
-                 if (0 < strlen(trim($alias)) &&
-                     is_numeric($quote->getPayment()->getAdditionalInformation('cvc'))
-
-                     && false === Mage::helper('ops/alias')->isAliasValidForAddresses(
-                         $quote->getCustomerId(),
-                         $alias,
-                         $quote->getBillingAddress(),
-                         $quote->getShippingAddress(),
-                         $quote->getStoreId()
-                     )) {
-                    $this->getOnepage()->getCheckout()->setGotoSection('payment');
-                    Mage::throwException(
-                        $this->getHelper()->__('Invalid payment information provided!')
-                    );
-                 }
-                $this->confirmAliasPayment($order, $quote);
-            } elseif ('ops_cc' == $code && Mage::helper('ops/payment')->isInlinePaymentWithQuoteId($quote->getPayment())
-                || ('ops_cc' == $code && $this->isAdminSession() && Mage::helper('ops/payment')->isInlinePaymentWithQuoteId($quote->getPayment()))) {
-               $this->confirmAliasPayment($order, $quote);
-            } elseif ('ops_directDebit' == $code && Mage::helper('ops/payment')->isInlinePaymentWithQuoteId($quote->getPayment())) {
+            if ('ops_directDebit' == $code
+                && Mage::helper('ops/payment')->isInlinePaymentWithQuoteId(
+                    $quote->getPayment()
+                )
+            ) {
                 $this->confirmDdPayment($order, $quote, $observer);
             } elseif ($quote->getPayment()->getMethodInstance() instanceof Netresearch_OPS_Model_Payment_Abstract) {
-                $requestParams = $quote->getPayment()->getMethodInstance()->getFormFields($order, array());
+                $requestParams = $quote->getPayment()->getMethodInstance()->getFormFields($order, array(), false);
                 $this->invokeRequestParamValidation($requestParams);
             }
         } catch (Exception $e) {
             $quote->setIsActive(true);
             $this->getOnepage()->getCheckout()->setGotoSection('payment');
             throw new Mage_Core_Exception($e->getMessage());
-        }
-    }
-
-    public function salesModelServiceQuoteSubmitSuccess($observer)
-    {
-        $quote = $observer->getQuote();
-        if (Mage::helper('ops/payment')->isInlinePaymentWithQuoteId($quote->getPayment())) {
-            $quote = $observer->getQuote();
-            $quote->getPayment()
-                ->setAdditionalInformation('checkoutFinishedSuccessfully', true)
-                ->save();
-        }
-    }
-
-    /**
-     * set order status for orders with OPS payment
-     */
-    public function checkoutTypeOnepageSaveOrderAfter($observer)
-    {
-        $quote = $observer->getQuote();
-        if (Mage::helper('ops/payment')->isInlinePaymentWithQuoteId($quote->getPayment())) {
-            $order = $observer->getOrder();
-
-            /* if there was no error */
-            if (true === $quote->getPayment()->getAdditionalInformation('checkoutFinishedSuccessfully')) {
-                $opsResponse = $quote->getPayment()->getAdditionalInformation('ops_response');
-                if ($opsResponse) {
-                    Mage::helper('ops/payment')->applyStateForOrder($order, $opsResponse);
-                    Mage::helper('ops/alias')->setAliasActive($quote, $order, true);
-
-                } else {
-                    Mage::helper('ops/payment')->handleUnknownStatus($order);
-                }
-                $quote->getPayment()->setAdditionalInformation('alreadyProcessed', true);
-                $quote->getPayment()->unsAdditionalInformation('checkoutFinishedSuccessfully');
-                $quote->getPayment()->save();
-            } else {
-                $this->handleFailedCheckout($quote, $order);
-            }
-        }
-    }
-    
-   
-
-    /**
-     * set order status for orders with OPS payment
-     */
-    public function checkoutSubmitAllAfter($observer)
-    {
-
-        $quote = $observer->getQuote();
-        $order = $observer->getOrder();
-        if (true !== $quote->getPayment()->getAdditionalInformation('alreadyProcessed')) {
-            if ((
-                    $this->isAdminSession()
-                && Mage::helper('ops/payment')->isInlinePaymentWithQuoteId($quote->getPayment())
-                ) || (
-                    Mage::helper('ops/payment')->isInlinePaymentWithQuoteId($quote->getPayment())
-                    && !is_null($quote->getPayment()->getAdditionalInformation('checkoutFinishedSuccessfully'))
-                )) {
-                /* if there was no error */
-                if (true === $quote->getPayment()->getAdditionalInformation('checkoutFinishedSuccessfully')) {
-                    $opsResponse = $quote->getPayment()->getAdditionalInformation('ops_response');
-                    if ($opsResponse) {
-                        Mage::helper('ops/payment')->applyStateForOrder($order, $opsResponse);
-                    } elseif ($this->isAdminSession()) {
-                          Mage::helper('ops/payment')->handleUnknownStatus($order);
-                    }
-                } else {
-                    $this->handleFailedCheckout($quote, $order);
-                }
-            }
-            if (true === $this->isCheckOutWithExistingTxId($quote->getPayment()->getMethodInstance()->getCode())) {
-                $order->getPayment()->setAdditionalInformation('paymentId', $quote->getPayment()->getOpsPayId())->save();
-            }
         }
     }
 
@@ -181,39 +94,6 @@ class Netresearch_OPS_Model_Observer
                 $observer->getQuote(),
                 $observer->getOrder()
             );
-        }
-    }
-
-    public function handleFailedCheckout($quote)
-    {
-        if (Mage::helper('ops/payment')->isInlinePaymentWithQuoteId($quote->getPayment())) {
-            $opsResponse = $quote->getPayment()->getAdditionalInformation('ops_response');
-            if ($opsResponse) {
-                $this->getHelper()->log('Cancel Ingenico Payment Services Payment because Order Save Process failed.');
-                $amount = $this->getHelper('payment')->getBaseGrandTotalFromSalesObject($quote);
-                //Try to cancel order only if the payment was ok
-                if (Mage::helper('ops/payment')->isPaymentAccepted($opsResponse['STATUS'])) {
-                    if (true === $this->getHelper('payment')->isPaymentAuthorizeType($opsResponse['STATUS'])) { 
-                        //do a void
-                        $params = array (
-                            'OPERATION' => Netresearch_OPS_Model_Payment_Abstract::OPS_DELETE_AUTHORIZE_AND_CLOSE,
-                            'ORDERID'   => Mage::getSingleton('ops/config')->getConfigData('devprefix').$quote->getId(),
-                            'AMOUNT'    => $this->getHelper()->getAmount($amount)
-                        );
-                    }
-
-                    if (true === $this->getHelper('payment')->isPaymentCaptureType($opsResponse['STATUS'])) { 
-                        //do a refund
-                        $params = array (
-                            'OPERATION' => Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_FULL,
-                            'ORDERID'   => Mage::getSingleton('ops/config')->getConfigData('devprefix').$quote->getId(),
-                            'AMOUNT'    => $this->getHelper()->getAmount($amount)
-                        );
-                    }
-                    $url = Mage::getModel('ops/config')->getDirectLinkGatewayPath($quote->getStoreId());
-                    Mage::getSingleton('ops/api_directlink')->performRequest($params, $url, $quote->getStoreId());
-                }
-            }
         }
     }
 
@@ -233,7 +113,7 @@ class Netresearch_OPS_Model_Observer
         Mage::helper('ops/alias')->cleanUpAdditionalInformation($quote->getPayment(), true);
 
         return $this->performDirectLinkRequest($quote, $requestParams, $quote->getStoreId());
-        
+
     }
 
     public function confirmDdPayment($order, $quote)
@@ -255,62 +135,16 @@ class Netresearch_OPS_Model_Observer
         /**
          * allow null as valid state for creating the order with status 'pending'
          */
-        if (!is_null($response['STATUS']) 
+        if (!is_null($response['STATUS'])
             && Mage::helper('ops/payment')->isPaymentFailed($response['STATUS'])
-           ) {
-            throw new Mage_Core_Exception($this->getHelper()->__('Ingenico Payment Services Payment failed'));
+        ) {
+            throw new Mage_Core_Exception($this->getHelper()->__('PayEngine Payment failed'));
         }
         $quote->getPayment()->setAdditionalInformation('ops_response', $response)->save();
-        
+
     }
 
-    /**
-     * Check if checkout was made with OPS CreditCart or DirectDebit
-     *
-     * @deprecated
-     * @return boolean
-     */
-//    /**
-//     * Check if checkout was made with OPS CreditCart or DirectDebit
-//     *
-//     * @deprecated
-//     * @return boolean
-//     */
-//    protected function isCheckoutWithAliasOrDd($code)
-//    {
-//        if ('ops_cc' == $code || 'ops_directDebit' == $code || 'ops_alias' == $code)
-//            return true;
-//        else
-//            return false;
-//    }
 
-    /**
-     *
-     * @TODO delete after testing
-     * checks if the selected payment supports inline mode
-     *
-     * @param $payment - the payment to check
-     *
-     * @return - true if it's support inline mode, false otherwise
-     * @deprecated
-     */
-//    protected function isInlinePayment($payment)
-//    {
-//        $result = false;
-//        $code = $payment->getMethodInstance()->getCode();
-//        if (($code == 'ops_cc'
-//                && $payment->getMethodInstance()
-//                    ->hasBrandAliasInterfaceSupport(
-//                        $payment
-//                    )
-//            )
-//            || $code == 'ops_directDebit'
-//        ) {
-//            $result = true;
-//        }
-//        return $result;
-//    }
-    
     /**
      * Check if checkout was made with OPS CreditCart or DirectDebit
      *
@@ -318,88 +152,58 @@ class Netresearch_OPS_Model_Observer
      */
     protected function isCheckoutWithExistingTxId($code)
     {
-        if ('ops_opsid' == $code)
+        if ('ops_opsid' == $code) {
             return true;
-        else
+        } else {
             return false;
+        }
     }
 
     /**
-     * @TODO delete after testing
+     * Replace order cancel comfirm message of Magento by a custom message from PayEngine
      *
-     * @deprected
+     * @event adminhtml_block_html_before
      *
-     * get payment operation code
-     *
-     * @param Mage_Sales_Model_Order $order
-     *
-     * @return string
-     */
-//    public function _getPaymentAction($order)
-//    {
-//        $operation = Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZE_ACTION;
-//
-//        // different capture operation name for direct debits
-//        if ('Direct Debits DE' == $order->getPayment()->getAdditionalInformation('PM')
-//            || 'Direct Debits AT' == $order->getPayment()->getAdditionalInformation('PM')
-//        ) {
-//            if ('authorize_capture' == Mage::getModel('ops/config')->getPaymentAction($order->getStoreId())) {
-//                return Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZE_CAPTURE_ACTION;
-//            }
-//            return Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZE_ACTION;
-//        }
-//        // no RES for Direct Debits NL, so we'll do the final sale
-//        if ('Direct Debits NL' == $order->getPayment()->getAdditionalInformation('PM')) {
-//            if ('authorize_capture' == Mage::getModel('ops/config')->getPaymentAction($order->getStoreId())) {
-//                return Netresearch_OPS_Model_Payment_Abstract::OPS_CAPTURE_DIRECTDEBIT_NL;
-//            }
-//            return Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZE_ACTION;
-//        }
-//
-//        if ('authorize_capture' == Mage::getModel('ops/config')->getPaymentAction($order->getStoreId())) {
-//            $operation = Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZE_CAPTURE_ACTION;
-//        }
-//
-//        return $operation;
-//    }
-
-    /**
-     * Replace order cancel comfirm message of Magento by a custom message from Ingenico Payment Services
-     * 
      * @param Varien_Event_Observer $observer
+     *
      * @return Netresearch_OPS_Model_Observer
      */
     public function updateOrderCancelButton(Varien_Event_Observer $observer)
     {
         /* @var $block Mage_Adminhtml_Block_Template */
         $block = $observer->getEvent()->getBlock();
-        
+
         //Stop if block is not sales order view
         if ($block->getType() != 'adminhtml/sales_order_view') {
             return $this;
         }
-        
-        //If payment method is one of the Ingenico Payment Services-ones and order can be cancelled manually
+
+        //If payment method is one of the PayEngine-ones and order can be cancelled manually
         if ($block->getOrder()->getPayment()->getMethodInstance() instanceof Netresearch_OPS_Model_Payment_Abstract
-            && true === $block->getOrder()->getPayment()->getMethodInstance()->canCancelManually($block->getOrder())) {
+            && true === $block->getOrder()->getPayment()->getMethodInstance()->canCancelManually($block->getOrder())
+        ) {
             //Build message and update cancel button
             $message = Mage::helper('ops')->__(
-                "Are you sure you want to cancel this order? Warning: Please check the payment status in the back-office of Ingenico Payment Services before. By cancelling this order you won\\'t be able to update the status in Magento anymore."
+                "Are you sure you want to cancel this order? Warning: Please check the payment status in the back-office of PayEngine before. By cancelling this order you won\\'t be able to update the status in Magento anymore."
             );
             $block->updateButton(
                 'order_cancel',
                 'onclick',
-                'deleteConfirm(\''.$message.'\', \'' . $block->getCancelUrl() . '\')'
+                'deleteConfirm(\'' . $message . '\', \'' . $block->getCancelUrl() . '\')'
             );
         }
+
         return $this;
     }
 
     /**
      *
-     * appends a checkbox for closing the transaction if it's a Ingenico Payment Services payment
-     * 
+     * appends a checkbox for closing the transaction if it's a PayEngine payment
+     *
+     * @event core_block_abstract_to_html_after
+     *
      * @param Varien_Event_Observer $observer
+     *
      * @return void
      */
     public function appendCheckBoxToRefundForm($observer)
@@ -407,24 +211,24 @@ class Netresearch_OPS_Model_Observer
         $html = '';
         /*
          * show the checkbox only if the credit memo create page is displayed and
-         * the refund can be done online and the payment is done via Ingenico Payment Services
+         * the refund can be done online and the payment is done via PayEngine
          */
         if ($observer->getBlock() instanceof Mage_Adminhtml_Block_Sales_Order_Creditmemo_Totals
-            && $observer->getBlock()->getParentBlock() 
-                instanceof Mage_Adminhtml_Block_Sales_Order_Creditmemo_Create_Items
+            && $observer->getBlock()->getParentBlock()
+            instanceof Mage_Adminhtml_Block_Sales_Order_Creditmemo_Create_Items
             && $observer->getBlock()->getParentBlock()->getCreditmemo()->getOrder()->getPayment()
             && $observer->getBlock()->getParentBlock()->getCreditmemo()->getOrder()->getPayment()->getMethodInstance()
-                instanceof Netresearch_OPS_Model_Payment_Abstract
+            instanceof Netresearch_OPS_Model_Payment_Abstract
             && $observer->getBlock()->getParentBlock()->getCreditmemo()->canRefund()
             && $observer->getBlock()->getParentBlock()->getCreditmemo()->getInvoice()
             && $observer->getBlock()->getParentBlock()->getCreditmemo()->getInvoice()->getTransactionId()
         ) {
             $transport = $observer->getTransport();
-            $block     = $observer->getBlock();
-            $layout    = $block->getLayout();
-            $html      = $transport->getHtml();
+            $block = $observer->getBlock();
+            $layout = $block->getLayout();
+            $html = $transport->getHtml();
             $checkBoxHtml = $layout->createBlock(
-                'ops/adminhtml_sales_order_creditmemo_totals_checkbox', 
+                'ops/adminhtml_sales_order_creditmemo_totals_checkbox',
                 'ops_refund_checkbox'
             )
                 ->setTemplate('ops/sales/order/creditmemo/totals/checkbox.phtml')
@@ -432,6 +236,7 @@ class Netresearch_OPS_Model_Observer
             $html = $html . $checkBoxHtml;
             $transport->setHtml($html);
         }
+
         return $html;
     }
 
@@ -439,10 +244,13 @@ class Netresearch_OPS_Model_Observer
      *
      * fetch the creation of credit memo event and display warning message when
      * - credit memo could be done online
-     * - payment is a Ingenico Payment Services payment
-     * - Ingenico Payment Services transaction is closed
+     * - payment is a PayEngine payment
+     * - PayEngine transaction is closed
+     *
+     * @event core_block_abstract_to_html_after
      *
      * @param Varien_Event_Observer $observer
+     *
      * @return void
      */
     public function showWarningForClosedTransactions($observer)
@@ -450,35 +258,36 @@ class Netresearch_OPS_Model_Observer
         $html = '';
         /**
          * - credit memo could be done online
-         * - payment is a Ingenico Payment Services payment
-         * - Ingenico Payment Services transaction is closed
+         * - payment is a PayEngine payment
+         * - PayEngine transaction is closed
          */
         if ($observer->getBlock() instanceof Mage_Adminhtml_Block_Sales_Order_Creditmemo_Create
             && $observer->getBlock()->getCreditmemo()->getOrder()->getPayment()
             && $observer->getBlock()->getCreditmemo()->getOrder()->getPayment()->getMethodInstance()
-                instanceof Netresearch_OPS_Model_Payment_Abstract
+            instanceof Netresearch_OPS_Model_Payment_Abstract
             && $observer->getBlock()->getCreditmemo()->getInvoice()
             && $observer->getBlock()->getCreditmemo()->getInvoice()->getTransactionId()
             && false === $observer->getBlock()->getCreditmemo()->canRefund()
         ) {
             $transport = $observer->getTransport();
-            $block     = $observer->getBlock();
-            $layout    = $block->getLayout();
-            $html      = $transport->getHtml();
+            $block = $observer->getBlock();
+            $layout = $block->getLayout();
+            $html = $transport->getHtml();
             $warningHtml = $layout->createBlock(
-                'ops/adminhtml_sales_order_creditmemo_closedTransaction_warning', 
+                'ops/adminhtml_sales_order_creditmemo_closedTransaction_warning',
                 'ops_closed-transaction-warning'
-            )
-                ->renderView();
-            $html      = $warningHtml . $html;
+            )->renderView();
+            $html = $warningHtml . $html;
             $transport->setHtml($html);
         }
+
         return $html;
     }
 
-    
+
     /**
      * triggered by cron for deleting old payment data from the additional payment information
+     *
      * @param $observer
      */
     public function cleanUpOldPaymentData($observer)
@@ -490,7 +299,10 @@ class Netresearch_OPS_Model_Observer
      * in some cases the payment method is not set properly by Magento so we need to reset the
      * payment method in the quote's payment before importing the data
      *
+     * @event sales_quote_payment_import_data_before
+     *
      * @param $observer
+     *
      * @return $this
      */
     public function clearPaymentMethodFromQuote(Varien_Event_Observer $observer)
@@ -505,21 +317,28 @@ class Netresearch_OPS_Model_Observer
     }
 
     /**
-     * appends the status update button to the order's button in case it's an Ingenico Payment Services payment
+     * appends the status update button to the order's button in case it's an PayEngine payment
+     *
+     * @event core_block_abstract_prepare_layout_before
      *
      * @param Varien_Event_Observer $observer
+     *
      * @return $this
      */
-    public function coreBlockAbstractPrepareLayoutBefore(Varien_Event_Observer $observer)
+    public function addStatusUpdateButtonToOrderView(Varien_Event_Observer $observer)
     {
         $block = $observer->getBlock();
         if ($block instanceof Mage_Adminhtml_Block_Sales_Order_View) {
             $paymentMethod = $block->getOrder()->getPayment()->getMethodInstance();
             if ($paymentMethod instanceof Netresearch_OPS_Model_Payment_Abstract
-                && Mage::getSingleton('admin/session')->isAllowed('sales/order/invoice')) {
-                $block->addButton('ops_refresh', array(
-                    'label'     => Mage::helper('ops/data')->__('Refresh payment status'),
-                    'onclick'   => 'setLocation(\'' . $block->getUrl('adminhtml/opsstatus/update') . '\')'));
+                && Mage::getSingleton('admin/session')->isAllowed('sales/order/actions/invoice')
+            ) {
+
+                $block->addButton(
+                    'ops_refresh', array(
+                        'label'   => Mage::helper('ops/data')->__('Refresh payment status'),
+                        'onclick' => 'setLocation(\'' . $block->getUrl('adminhtml/opsstatus/update') . '\')')
+                );
             }
         }
 
@@ -530,6 +349,7 @@ class Netresearch_OPS_Model_Observer
      * @event core_block_abstract_prepare_layout_before
      *
      * @param Varien_Event_Observer $observer
+     *
      * @return $this
      */
     public function addCcPaymentMethod(Varien_Event_Observer $observer)
@@ -573,6 +393,7 @@ class Netresearch_OPS_Model_Observer
      * @param $requestParams
      *
      * @throws Mage_Core_Exception
+     * @return Netresearch_OPS_Model_Observer
      */
     protected function invokeRequestParamValidation($requestParams)
     {
@@ -582,7 +403,7 @@ class Netresearch_OPS_Model_Observer
         if (false == $validator->isValid($requestParams)) {
             $this->getOnepage()->getCheckout()->setGotoSection('payment');
             Mage::throwException(
-                $this->getHelper()->__('The data you have provided can not be processed by Ingenico Payment Services')
+                $this->getHelper()->__('The data you have provided can not be processed by PayEngine')
             );
         }
 
@@ -591,26 +412,9 @@ class Netresearch_OPS_Model_Observer
 
 
     /**
-     * @event sales_order_save_before
-     * @param Varien_Event_Observer $observer
-     */
-    public function checkForOpsStatus(Varien_Event_Observer $observer)
-    {
-        $order    = $observer->getOrder();
-        $origData = $order->getOrigData();
-        if (is_array($origData) && array_key_exists('status', $origData) && $order->getStatus() != $origData['status']
-            && $order->getPayment()->getMethodInstance() instanceof Netresearch_OPS_Model_Payment_Abstract
-            && Mage::helper('ops/data')->isAdminSession()
-        ) {
-            Mage::helper('ops/order')
-                ->checkForOpsStateOnStatusUpdate($order);
-        }
-
-        return $this;
-    }
-
-    /**
      * validates the input fields after the payment step in OPC
+     *
+     * @event controller_action_postdispatch_checkout_onepage_savePayment
      *
      * @param Varien_Event_Observer $event
      *
@@ -623,7 +427,7 @@ class Netresearch_OPS_Model_Observer
         if ($quote->getPayment()->getMethodInstance() instanceof Netresearch_OPS_Model_Payment_Abstract) {
             $paramHelper = Mage::helper('ops/payment_request');
             $shippingParams = array();
-            $billingParams = $paramHelper->getOwnerParams($quote, $quote->getBillingAddress());
+            $billingParams = $paramHelper->getOwnerParams($quote->getBillingAddress(), $quote);
             if ($quote->getShippingAddress()) {
                 $shippingParams = $paramHelper->extractShipToParameters($quote->getShippingAddress(), $quote);
             }
@@ -658,103 +462,238 @@ class Netresearch_OPS_Model_Observer
     }
 
     /**
-     * @event core_block_abstract_to_html_after
+     * resets the order status back to pending payment in case of directlink payments in PayEngine authorize status
+     *
+     * @event sales_order_payment_place_end
+     *
      * @param Varien_Event_Observer $event
      */
-    public function appendPartialCaptureWarningForOpenInvoice(Varien_Event_Observer $event)
+    public function setOrderStateDirectLink(Varien_Event_Observer $event)
     {
-        $block = $event->getBlock();
-        if ($block instanceof Mage_Adminhtml_Block_Sales_Order_Invoice_Totals
-            && $block->getInvoice()->getOrder()->getPayment()->getMethodInstance() instanceof Netresearch_OPS_Model_Payment_OpenInvoice_Abstract
-            && $block->getInvoice()->getOrder()->getPayment()->getMethodInstance()->canCapturePartial() === true
+        /** @var Mage_Sales_Model_Order_Payment $payment */
+        $payment = $event->getPayment();
+
+        if ($payment->getMethodInstance() instanceof Netresearch_OPS_Model_Payment_DirectLink
+            && Mage::helper('ops/payment')->isInlinePayment($payment)
+            && Netresearch_OPS_Model_Status::AUTHORIZED == $payment->getAdditionalInformation('status')
+            && $payment->getOrder()->getState() != Mage_Sales_Model_Order::STATE_PENDING_PAYMENT
         ) {
-            $transport = $event->getTransport();
-            $layout    = $block->getLayout();
-            $html      = $transport->getHtml();
-            $warningHtml = $layout->createBlock(
-                'ops/adminhtml_sales_order_invoice_warning_openInvoice',
-                'ops_invoice-openInvoice-warning'
-            )
-                ->renderView();
-            $html      = $html . $warningHtml ;
-            $transport->setHtml($html);
+            $payment->getOrder()->setState(
+                Mage_Sales_Model_Order::STATE_PENDING_PAYMENT, true,
+                $this->getHelper()->__('Payment has been authorized by PayEngine, but not yet captured.')
+            );
+        }
+    }
+
+
+    /**
+     * appends the resend payment info button to the order's button in case it's an PayEngine payment
+     * and the payment status is an authorize status
+     *
+     * @event core_block_abstract_prepare_layout_before
+     *
+     * @param Varien_Event_Observer $observer
+     *
+     * @return $this
+     */
+    public function addResendPaymentInfoButtonToOrderView(Varien_Event_Observer $observer)
+    {
+        $block = $observer->getBlock();
+        if ($block instanceof Mage_Adminhtml_Block_Sales_Order_View) {
+            $payment = $block->getOrder()->getPayment();
+            $paymentMethod = $payment->getMethodInstance();
+            if ($paymentMethod instanceof Netresearch_OPS_Model_Payment_Abstract
+                && Mage::getSingleton('admin/session')->isAllowed('sales/order/actions/invoice')
+                && Netresearch_OPS_Model_Status::canResendPaymentInfo($payment->getAdditionalInformation('status'))
+                && !in_array(
+                    $block->getOrder()->getState(),
+                    array(
+                        Mage_Sales_Model_Order::STATE_CANCELED,
+                        Mage_Sales_Model_Order::STATE_CLOSED,
+                        Mage_Sales_Model_Order::STATE_COMPLETE
+                    )
+                )
+            ) {
+                $block->addButton(
+                    'ops_resend_info', array(
+                        'label'   => Mage::helper('ops/data')->__('Resend payment information'),
+                        'onclick' => 'setLocation(\'' . $block->getUrl('adminhtml/admin/resendInfo') . '\')')
+                );
+            }
+        }
+    }
+
+    /**
+     * Adjusts the confirmation message text of the recurring profiles cancel and suspend button to inform the merchant
+     * that no call to PayEngine will happen
+     *
+     * @event        adminhtml_block_html_before
+     *
+     * @param Varien_Event_Observer $observer
+     */
+    public function updateRecurringProfileButtons(Varien_Event_Observer $observer)
+    {
+        /** @var $block Mage_Sales_Block_Adminhtml_Recurring_Profile_View */
+        $block = $observer->getEvent()->getBlock();
+
+        if ($block->getType() == 'sales/adminhtml_recurring_profile_view') {
+            $profile = Mage::registry('current_recurring_profile');
+            if ($profile->getMethodCode() == Netresearch_OPS_Model_Payment_Recurring_Cc::CODE) {
+                $cancelMessage = Mage::helper('ops')
+                    ->__(
+                        'Are you sure you want to perform this action? Canceling the subscription here will not actually cancel the subscription on PayEngine side. To stop charging the customer you will have to deactivate the subscription there.'
+                    );
+                $cancelUrl = $block->getUrl(
+                    '*/*/updateState',
+                    array('profile' => $profile->getId(), 'action' => 'cancel')
+                );
+
+                $block->updateButton(
+                    'cancel',
+                    'onclick',
+                    "confirmSetLocation('{$cancelMessage}', '{$cancelUrl}')"
+                );
+
+                $suspendMessage = Mage::helper('ops')
+                    ->__(
+                        'Are you sure you want to perform this action? Suspending the subscription here will not actually cancel the subscription on PayEngine side. To stop charging the customer you will have to deactivate the subscription there.'
+                    );
+                $suspendUrl = $block->getUrl(
+                    '*/*/updateState',
+                    array('profile' => $profile->getId(), 'action' => 'suspend')
+                );
+
+                $block->updateButton(
+                    'suspend',
+                    'onclick',
+                    "confirmSetLocation('{$suspendMessage}', '{$suspendUrl}')"
+                );
+            }
+        }
+    }
+
+    /**
+     * Overwrites the state of the recurring profile if necessary
+     *
+     * @event model_save_before - due to lack of event prefix for recurring profile models
+     *
+     * @param Varien_Event_Observer $observer
+     *
+     * @return $this
+     */
+    public function overrideRecurringProfileState(Varien_Event_Observer $observer)
+    {
+        $object = $observer->getObject();
+
+        /** @var $object Mage_Payment_Model_Recurring_Profile */
+        if ($object instanceof Mage_Payment_Model_Recurring_Profile
+            && $object->getMethodCode() === Netresearch_OPS_Model_Payment_Recurring_Cc::CODE
+            && $object->getState() != $object->getNewState()
+            && $object->getOverrideState() === true
+        ) {
+            $object->setState($object->getNewState());
         }
 
         return $this;
     }
-    
+
+
     /**
-     * resets the order status back to pending payment in case of direct debits nl with order id as merchant ref
-     * @event sales_order_payment_place_end
-     * @param Varien_Event_Observer $event
+     * @event adminhtml_block_html_before
+     *
+     * @param Varien_Event_Observer $observer
+     *
+     * @return $this
      */
-    public function setOrderStateForDirectDebitsNl(Varien_Event_Observer $event)
+    public function updateRecurringProfileEditForm(Varien_Event_Observer $observer)
     {
-        $payment = $event->getPayment();
-        if ($payment->getMethodInstance() instanceof Netresearch_OPS_Model_Payment_DirectDebit
-            && Mage::helper('ops/payment')->isInlinePaymentWithOrderId($payment)
-            && $payment->getAdditionalInformation('PM') == 'Direct Debits NL'
-            && $payment->getAdditionalInformation('STATUS') == Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED_WAITING
+        if ($observer->getBlock() instanceof Mage_Sales_Block_Adminhtml_Recurring_Profile_Edit_Form
+            && Mage::getModel('ops/payment_recurring_cc')->getConfigData('active')
         ) {
-            $payment->getOrder()->setStatus(Mage_Sales_Model_Order::STATE_PENDING_PAYMENT);
-            $payment->getOrder()->setState(Mage_Sales_Model_Order::STATE_PENDING_PAYMENT);
+            /** @var Mage_Sales_Block_Adminhtml_Recurring_Profile_Edit_Form $form */
+            $html = $observer->getTransport()->getHtml();
+
+            $method = Mage::getModel('ops/payment_recurring_cc');
+
+            $message = Mage::helper('ops')
+                ->__(
+                    "When using %s as payment method the settings for '%s' and '%s' will not be processed.",
+                    $method->getTitle(),
+                    Mage::helper('payment')->__('Allow Initial Fee Failure'),
+                    Mage::helper('payment')->__('Maximum Payment Failures')
+                );
+
+            $message = '<div class="notice-msg" style="padding-left: 26px;"><p style="padding: 7px;">' . $message
+                . '</p></div>';
+            $observer->getTransport()->setHtml($html . $message);
+
+
         }
+
+        return $this;
     }
 
     /**
-     * @TODO delete after testing
-     * sets the invoice state to pending in case the identification is outstanding (3D secure)
+     * Since there is no other way for inline payments to change the order state, we enforce the pending_payment state
+     * for only authorized, not yet payed orders
      *
-     * @event sales_order_save_before
+     * @param Varien_Event_Observer $observer
      *
-     * @param Varien_Event_Observer $event
-     * @deprecated
+     * @event sales_order_payment_place_end
+     * @return $this
      */
-//    public function deleteInvoiceFromOrder(Varien_Event_Observer $event)
-//    {
-////        /** @var $order Mage_Sales_Model_Order */
-////        $order   = $event->getDataObject();
-////        $payment = $order->getPayment();
-////        if (Mage::helper('ops/payment')->isInlinePaymentWithOrderId($payment)
-////            && $payment->getAdditionalInformation('status')
-////            == Netresearch_OPS_Model_Payment_Abstract::OPS_WAITING_FOR_IDENTIFICATION
-////        ) {
-////            /** @var $invoice Mage_Sales_Model_Order_Invoice */
-////            foreach ($order->getInvoiceCollection() as $invoice) {
-////                $invoice->setState(Mage_Sales_Model_Order_Invoice::STATE_OPEN);
-////            }
-////            $order->setState(Mage_Sales_Model_Order::STATE_PENDING_PAYMENT);
-////            $order->setStatus(Mage_Sales_Model_Order::STATE_PENDING_PAYMENT);
-////        }
-////
-//        return $this;
-//    }
-
-    public function  appendWarningToRefundFormForOpenInvoiceNl(Varien_Event_Observer $event)
+    public function enforcePaymentPendingForAuthorizedOrders(Varien_Event_Observer $observer)
     {
-        $html = '';
-        if ($event->getBlock() instanceof Mage_Adminhtml_Block_Sales_Order_Creditmemo_Totals
-            && $event->getBlock()->getParentBlock()
-            instanceof Mage_Adminhtml_Block_Sales_Order_Creditmemo_Create_Items
-            && $event->getBlock()->getParentBlock()->getCreditmemo()->getOrder()->getPayment()
-            && $event->getBlock()->getParentBlock()->getCreditmemo()->getOrder()->getPayment()->getMethodInstance()
-            instanceof Netresearch_OPS_Model_Payment_OpenInvoiceNl
-            && $event->getBlock()->getParentBlock()->getCreditmemo()->canRefund()
-            && $event->getBlock()->getParentBlock()->getCreditmemo()->getInvoice()
-            && $event->getBlock()->getParentBlock()->getCreditmemo()->getInvoice()->getTransactionId()
+        /** @var Mage_Sales_Model_Order_Payment $payment */
+        $payment = $observer->getData('payment');
+        /** @var Mage_Sales_Model_Order $order */
+        $order = $payment->getOrder();
+
+        $status = $payment->getAdditionalInformation('status');
+        if ($this->getConfig()->getPaymentAction($order->getStoreId())
+            == Netresearch_OPS_Model_Payment_Abstract::ACTION_AUTHORIZE
+            && Netresearch_OPS_Model_Status::isAuthorize($status)
+            && $order->getState() != Mage_Sales_Model_Order::STATE_PENDING_PAYMENT
         ) {
-            $transport = $event->getTransport();
-            $block     = $event->getBlock();
-            $layout    = $block->getLayout();
-            $html      = $transport->getHtml();
-            $warningHtml = $layout->createBlock(
-                'ops/adminhtml_sales_order_creditmemo_warning_openInvoiceNl',
-                'ops_openinvoice-warning'
-            )
-                                  ->renderView();
-            $html      = $warningHtml . $html;
-            $transport->setHtml($html);
+            $message = $this->getHelper()->__('Order has been authorized, but not captured/paid yet.');
+            $order->setState(Mage_Sales_Model_Order::STATE_PENDING_PAYMENT, true, $message);
+
         }
-        return $html;
+
+        return $this;
+    }
+
+    /**
+     * Magento does not send order confirmation emails when
+     * - payment action "authorization" is processed in frontend via gateway.
+     * Magento does not send invoice emails when
+     * - payment action "authorization+capture" is processed in frontend or admin
+     *
+     * event: checkout_submit_all_after
+     *
+     * @param Varien_Event_Observer $observer
+     */
+    public function sendTransactionalEmails(Varien_Event_Observer $observer)
+    {
+        /** @var Mage_Sales_Model_Order $order */
+        $order = $observer->getOrder();
+        if (!$order->getPayment()->getMethodInstance() instanceof Netresearch_OPS_Model_Payment_Abstract) {
+            // ignore third-party payment methods
+            return;
+        }
+
+        /** @var Mage_Sales_Model_Quote $quote */
+        $quote = $observer->getQuote();
+        if ($quote->getPayment()->getOrderPlaceRedirectUrl()) {
+            // redirect payments require special treatment, may still get cancelled or declined
+            return;
+        }
+
+        try {
+            Mage::helper('ops/data')->sendTransactionalEmail($order);
+            Mage::helper('ops/data')->sendTransactionalEmail($order->getPayment()->getCreatedInvoice());
+        } catch (Exception $e) {
+            Mage::logException($e);
+        }
     }
 }

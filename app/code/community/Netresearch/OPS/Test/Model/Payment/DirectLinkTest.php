@@ -17,9 +17,12 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
     {
         parent::setUp();
         $payment = Mage::getModel('sales/order_payment');
-        $payment->setAdditionalInformation('CC_BRAND', 'VISA');
+        $payment->setAdditionalInformation('CC_BRAND', 'VISA')
+            ->setMethod('ops_cc');
         $this->testObjects[] = Mage::getModel('ops/payment_cc')->setInfoInstance($payment);
-        $this->testObjects[] = Mage::getModel('ops/payment_directDebit');
+        $payment2 = clone($payment);
+        $payment2->setMethod('ops_directDebit');
+        $this->testObjects[] = Mage::getModel('ops/payment_directDebit')->setInfoInstance($payment2);
     }
 
 
@@ -30,12 +33,6 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
         }
     }
 
-    public function testGetConfigPaymentActionReturnsEmptyStringAsDefault()
-    {
-        foreach ($this->testObjects as $testObject) {
-            $this->assertEquals('', $testObject->getConfigPaymentAction());
-        }
-    }
 
     public function testGetConfigPaymentActionReturnsMageAuthorizeWithOrderIdAsMerchRef()
     {
@@ -55,7 +52,7 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
         }
     }
 
-    public function testGetConfigPaymentActionReturnsEmptyStringWithQuoteIdAsMerchRef()
+    public function testGetConfigPaymentActionReturnsAuthorizeStringWithQuoteIdAsMerchRef()
     {
         $configMock = $this->getModelMock('ops/config', array('getInlineOrderReference', 'getPaymentAction'));
         $configMock->expects($this->any())
@@ -66,7 +63,7 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
             ->will($this->returnValue(Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE));
         foreach ($this->testObjects as $testObject) {
             $testObject->setConfig($configMock);
-            $this->assertEquals('', $testObject->getConfigPaymentAction());
+            $this->assertEquals(Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE, $testObject->getConfigPaymentAction());
         }
     }
 
@@ -90,7 +87,7 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
         }
     }
 
-    public function testGetConfigPaymentActionReturnsEmptyStringForDirectSaleWithQuoteIdAsMerchRef()
+    public function testGetConfigPaymentActionReturnsAuthorizeCaptureStringForDirectSaleWithQuoteIdAsMerchRef()
     {
         $configMock = $this->getModelMock('ops/config', array('getInlineOrderReference', 'getPaymentAction'));
         $configMock->expects($this->any())
@@ -101,12 +98,13 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
             ->will($this->returnValue(Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE_CAPTURE));
         foreach ($this->testObjects as $testObject) {
             $testObject->setConfig($configMock);
-            $this->assertEquals('', $testObject->getConfigPaymentAction());
+            $this->assertEquals(Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE_CAPTURE, $testObject->getConfigPaymentAction());
         }
     }
 
-    public function testIsInitializeNeededReturnsFalseOnInlineOrderId()
+    public function testIsInitializeNeededReturnsFalse()
     {
+
         $configMock = $this->getModelMock('ops/config', array('getInlineOrderReference'));
         $configMock->expects($this->any())
             ->method('getInlineOrderReference')
@@ -114,18 +112,6 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
         foreach ($this->testObjects as $testObject) {
             $testObject->setConfig($configMock);
             $this->assertFalse($testObject->isInitializeNeeded());
-        }
-    }
-
-    public function testIsInitializeNeededReturnsTrueOnInlineQuoteId()
-    {
-        $configMock = $this->getModelMock('ops/config', array('getInlineOrderReference'));
-        $configMock->expects($this->any())
-            ->method('getInlineOrderReference')
-            ->will($this->returnValue(Netresearch_OPS_Model_Payment_Abstract::REFERENCE_QUOTE_ID));
-        foreach ($this->testObjects as $testObject) {
-            $testObject->setConfig($configMock);
-            $this->assertTrue($testObject->isInitializeNeeded());
         }
     }
 
@@ -178,7 +164,7 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
             ->method('confirmPayment')
             ->with($fakeOrder, $fakeQuote, $payment)
         ;
-        $testMock->expects($this->once())
+        $testMock->expects($this->any())
             ->method('hasBrandAliasInterfaceSupport')
             ->will($this->returnValue(true));
         ;
@@ -191,13 +177,16 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
     public function testConfirmPaymentWithResponse()
     {
         $configMock = $this->getConfigMockWithOrderId();
+        /** @var Mage_Sales_Model_Order $fakeOrder */
         $fakeOrder = $this->getFakeOrder();
+        /** @var Mage_Sales_Model_Order_Payment $payment */
         $payment = $this->getFakePayment($fakeOrder);
 
         $fakeQuote       = $this->getFakeQuote();
         $quoteHelperMock = $this->getQuoteHelperMock($fakeQuote);
+        /** @var Netresearch_OPS_Model_Payment_DirectDebit $testMock */
         $testMock = $this->getModelMock('ops/payment_directDebit', array('handleAdminPayment', 'performPreDirectLinkCallActions', 'performPostDirectLinkCallActions'));
-
+        $testMock->setInfoInstance($payment);
         $dataHelperMock = $this->getHelperMock('ops/data', array('isAdminSession'));
         $dataHelperMock->expects($this->once())
             ->method('isAdminSession')
@@ -221,14 +210,12 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
             ->will($this->returnValue($response));
         $testMock->setDirectLinkHelper($directLinkHelperMock);
         $testMock->setQuoteHelper($quoteHelperMock);
-        $paymentHelperMock = $this->getHelperMock('ops/payment', array('applyStateForOrder'));
-        $paymentHelperMock->expects($this->once())
-            ->method('applyStateForOrder')
-            ->with($fakeOrder, $response);
-        $testMock->setPaymentHelper($paymentHelperMock);
+
         $testMock->setConfig($configMock);
         $testMock->authorize($payment, 100);
 
+        $this->assertEquals(5,$payment->getAdditionalInformation('status'));
+        $this->assertNotEmpty($fakeOrder->getAllStatusHistory());
     }
 
     public function testConfirmPaymentWithInvalidResponse()
@@ -359,6 +346,7 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
     protected function getFakeOrder()
     {
         $fakeOrder = $this->getModelMock('sales/order', array('save', '_beforeSave'));
+        $fakeOrder->setState(Mage_Sales_Model_Order::STATE_NEW);
         return $fakeOrder;
     }
 
@@ -372,6 +360,7 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
         $payment = $this->getModelMock('sales/order_payment', array('save'));
         $payment->setMethodInstance(Mage::getModel('ops/payment_directDebit'));
         $payment->setOrder($fakeOrder);
+        $fakeOrder->setPayment($payment);
         return $payment;
     }
 
@@ -406,9 +395,9 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
             ->will($this->returnValue(Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE_CAPTURE));
         $fakeOrder = $this->getFakeOrder();
         $payment = $this->getFakePayment($fakeOrder);
-        $paymentHelperMock = $this->getHelperMock('ops/payment', array('isInlinePaymentWithOrderId'));
+        $paymentHelperMock = $this->getHelperMock('ops/payment', array('isInlinePayment'));
         $paymentHelperMock->expects($this->once())
-            ->method('isInlinePaymentWithOrderId')
+            ->method('isInlinePayment')
             ->with($payment)
             ->will($this->returnValue(true));
 
@@ -448,9 +437,9 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
             ->will($this->returnValue(Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE_CAPTURE));
         $fakeOrder = $this->getFakeOrder();
         $payment = $this->getFakePayment($fakeOrder);
-        $paymentHelperMock = $this->getHelperMock('ops/payment', array('isInlinePaymentWithOrderId'));
+        $paymentHelperMock = $this->getHelperMock('ops/payment', array('isInlinePayment'));
         $paymentHelperMock->expects($this->once())
-            ->method('isInlinePaymentWithOrderId')
+            ->method('isInlinePayment')
             ->with($payment)
             ->will($this->returnValue(true));
 
@@ -473,9 +462,9 @@ class Netresearch_OPS_Test_Model_Payment_DirectLinkTest extends EcomDev_PHPUnit_
             ->will($this->returnValue(Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE_CAPTURE));
         $fakeOrder = $this->getFakeOrder();
         $payment = $this->getFakePayment($fakeOrder);
-        $paymentHelperMock = $this->getHelperMock('ops/payment', array('isInlinePaymentWithOrderId'));
+        $paymentHelperMock = $this->getHelperMock('ops/payment', array('isInlinePayment'));
         $paymentHelperMock->expects($this->once())
-            ->method('isInlinePaymentWithOrderId')
+            ->method('isInlinePayment')
             ->with($payment)
             ->will($this->returnValue(false));
 

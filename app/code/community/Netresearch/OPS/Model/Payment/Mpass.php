@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_Mpass
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'MPASS';
+    protected $brand = 'MPASS';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -18,11 +21,5 @@ class Netresearch_OPS_Model_Payment_Mpass
 
     /** payment code */
     protected $_code = 'ops_mpass';
-
-    /** ops payment code */
-    public function getOpsCode($payment=null)
-    {
-        return 'MPASS';
-    }
 }
 

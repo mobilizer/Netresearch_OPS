@@ -129,7 +129,7 @@ class Netresearch_OPS_Helper_Quote extends Mage_Core_Helper_Abstract
      */
     public function getQuote()
     {
-        if ($this->getDataHelper()->isAdminSession()) {
+        if (Mage::app()->getStore()->isAdmin()) {
             return Mage::getSingleton('adminhtml/session_quote')->getQuote();
         }
 

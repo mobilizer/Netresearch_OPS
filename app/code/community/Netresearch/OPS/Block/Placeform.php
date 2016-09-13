@@ -115,8 +115,20 @@ class Netresearch_OPS_Block_Placeform extends Mage_Core_Block_Template
      */
     public function getFormAction()
     {
-        return $this->getRequest()->isPost() || is_null($this->getQuestion()) ? $this->getConfig()->getFrontendGatewayPath() :
-            Mage::getUrl('*/*/*', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure()));
+        $formAction = '';
+
+        // extract variable to ensure php 5.4 compatibility
+        $question = $this->getQuestion();
+
+        if ($this->getRequest()->isPost() || empty($question)) {
+            $formAction = $this->getConfig()->getFrontendGatewayPath();
+        } else {
+            $formAction = Mage::getUrl(
+                '*/*/*', array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure())
+            );
+        }
+
+        return $formAction;
     }
 
     public function hasMissingParams()
@@ -144,6 +156,11 @@ class Netresearch_OPS_Block_Placeform extends Mage_Core_Block_Template
             $this->missingFormFields = $this->_getApi()->getQuestionedFormFields($this->_getOrder(), $this->getRequest()->getParams());
         }
         return $this->missingFormFields;
+    }
+
+    public function isIframeTarget()
+    {
+        return $this->getConfig()->getConfigData('template') === Netresearch_OPS_Model_Payment_Abstract::TEMPLATE_OPS_IFRAME;
     }
     
     

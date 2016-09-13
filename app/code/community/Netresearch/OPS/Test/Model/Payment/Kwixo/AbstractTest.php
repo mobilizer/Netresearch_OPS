@@ -6,7 +6,7 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
 
     /**
      * @test
-     * @loadFixture ../../../../../var/fixtures/orders.yaml
+     * @loadFixture orders.yaml
      */
     public function testGetMethodDependendFormFields()
     {
@@ -30,6 +30,8 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
 
         $formFields = Mage::getModel('ops/payment_kwixo_abstract')
             ->getMethodDependendFormFields($order);
+
+
         $this->assertTrue(array_key_exists('CN', $formFields));
         $this->assertTrue(array_key_exists('OWNERZIP', $formFields));
         $this->assertTrue(array_key_exists('OWNERCTY', $formFields));
@@ -39,9 +41,6 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
         $this->assertTrue(array_key_exists('OWNERADDRESS', $formFields));
         $this->assertTrue(array_key_exists('BRAND', $formFields));
         $this->assertTrue(array_key_exists('ADDMATCH', $formFields));
-        $this->assertTrue(
-            array_key_exists('ECOM_SHIPTO_POSTAL_POSTALCODE', $formFields)
-        );
         $this->assertTrue(
             array_key_exists('ECOM_BILLTO_POSTAL_POSTALCODE', $formFields)
         );
@@ -188,7 +187,7 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
      * @test
      * @loadFixture ../../../../../var/fixtures/orders.yaml
      */
-    public function testGetShipToParams()
+    public function testGetKwixoShipToParams()
     {
         $order       = Mage::getModel('sales/order')->load(11);
         $sessionMock = $this->getModelMock(
@@ -233,7 +232,7 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
             'model', 'ops/payment_kwixo_abstract', $kwixoAbstractModelMock
         );
         $formFields = Mage::getModel('ops/payment_kwixo_abstract')
-            ->getShipToParams($order);
+            ->getKwixoShipToParams($order);
         $this->assertTrue(
             array_key_exists('ECOM_SHIPTO_POSTAL_NAME_FIRST', $formFields)
         );
@@ -267,7 +266,7 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
             array('An der Tabaksmühle 3a', 'Etage 4')
         );
         $formFields = Mage::getModel('ops/payment_kwixo_abstract')
-            ->getShipToParams($order);
+            ->getKwixoShipToParams($order);
         $this->assertTrue(
             array_key_exists('ECOM_SHIPTO_POSTAL_STREET_LINE2', $formFields)
         );
@@ -277,7 +276,7 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
 
         $order->getShippingAddress()->setCompany('My great company');
         $formFields = Mage::getModel('ops/payment_kwixo_abstract')
-            ->getShipToParams($order);
+            ->getKwixoShipToParams($order);
         $this->assertTrue(array_key_exists('ECOM_SHIPTO_COMPANY', $formFields));
         $this->assertEquals(
             'My great company', $formFields['ECOM_SHIPTO_COMPANY']
@@ -285,7 +284,7 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
 
         $order->getShippingAddress()->setFax('4711');
         $formFields = Mage::getModel('ops/payment_kwixo_abstract')
-            ->getShipToParams($order);
+            ->getKwixoShipToParams($order);
         $this->assertTrue(
             array_key_exists('ECOM_SHIPTO_TELECOM_FAX_NUMBER', $formFields)
         );
@@ -296,7 +295,7 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
 
         $order->getShippingAddress()->setAddressType('shipping2');
         $formFields = Mage::getModel('ops/payment_kwixo_abstract')
-            ->getShipToParams($order);
+            ->getKwixoShipToParams($order);
         $this->assertTrue(
             array_key_exists('ECOM_SHIPTO_POSTAL_NAME_FIRST', $formFields)
         );
@@ -331,7 +330,7 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
      * @test
      * @loadFixture ../../../../../var/fixtures/orders.yaml
      */
-    public function testGetBillToParams()
+    public function testGetKwixoBillToParams()
     {
         $order       = Mage::getModel('sales/order')->load(11);
         $sessionMock = $this->getModelMock(
@@ -365,7 +364,7 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
         );
 
         $formFields = Mage::getModel('ops/payment_kwixo_abstract')
-            ->getBillToParams($order);
+            ->getKwixoBillToParams($order);
 
         $this->assertTrue(
             array_key_exists('ECOM_BILLTO_POSTAL_NAME_FIRST', $formFields)
@@ -380,7 +379,7 @@ class Netresearch_OPS_Test_Model_Payment_Kwixo_AbstractTest
             array('An der Tabaksmühle 3a', 'Etage 4')
         );
         $formFields = Mage::getModel('ops/payment_kwixo_abstract')
-            ->getBillToParams($order);
+            ->getKwixoBillToParams($order);
         $this->assertTrue(array_key_exists('OWNERADDRESS2', $formFields));
         $this->assertEquals('Etage 4', $formFields['OWNERADDRESS2']);
     }

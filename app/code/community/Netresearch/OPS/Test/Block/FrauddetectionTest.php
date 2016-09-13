@@ -9,11 +9,18 @@ class Netresearch_OPS_Test_Block_FrauddetectionTest
         $block = Mage::app()->getLayout()->getBlockSingleton('ops/frauddetection');
         $this->assertEquals(null, $block->toHtml());
 
-        $modelMock = $this->getModelMock('ops/config', array('isTrackingCodeActivated'));
-        $modelMock->expects($this->once())
-            ->method('isTrackingCodeActivated')
-            ->will($this->returnValue(true));
-        $this->replaceByMock('model', 'ops/config', $modelMock);
+        $configMock = $this->getModelMock('ops/config', array('getDeviceFingerPrinting'));
+        $configMock->expects($this->once())
+                   ->method('getDeviceFingerPrinting')
+                   ->will($this->returnValue(true));
+        $this->replaceByMock('model', 'ops/config', $configMock);
+
+        $sessionMock = $this->getModelMock('customer/session', array('getData'));
+        $sessionMock->expects($this->once())
+                     ->method('getData')
+                     ->with(Netresearch_OPS_Model_Payment_Abstract::FINGERPRINT_CONSENT_SESSION_KEY)
+                     ->will($this->returnValue(true));
+        $this->replaceByMock('singleton', 'customer/session', $sessionMock);
         // for some reason the html is not rendered in the tests
         $this->assertNotNull($block->toHtml());
     }
@@ -28,13 +35,18 @@ class Netresearch_OPS_Test_Block_FrauddetectionTest
 
     public function testGetTrackingSid()
     {
+        $quote = Mage::getModel('sales/quote');
+        $quote->setReservedOrderId('123456');
+        $quote->getStoreId(0);
+        Mage::app(0)->getStore(0)->setConfig(Netresearch_OPS_Model_Config::OPS_PAYMENT_PATH . 'PSPID', 'abc');
+
         $block = Mage::app()->getLayout()->getBlockSingleton('ops/frauddetection');
-        $modelMock = $this->getModelMock('customer/session', array('getSessionId'));
+        $modelMock = $this->getModelMock('checkout/type_onepage', array('getQuote'));
         $modelMock->expects($this->once())
-            ->method('getSessionId')
-            ->will($this->returnValue('123456'));
-        $this->replaceByMock('model', 'customer/session', $modelMock);
-        $this->assertEquals(md5('123456'), $block->getTrackingSid());
+                  ->method('getQuote')
+                  ->will($this->returnValue($quote));
+        $this->replaceByMock('singleton', 'checkout/type_onepage', $modelMock);
+        $this->assertEquals(md5(Mage::getModel('ops/config')->getPSPID() . '#123456'), $block->getTrackingSid());
     }
 
 }

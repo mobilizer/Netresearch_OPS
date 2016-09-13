@@ -131,11 +131,6 @@ class Netresearch_OPS_Test_Helper_QuoteTest extends EcomDev_PHPUnit_Test_Case
 
     public function testGetQuoteWithAdminSession()
     {
-        $dataHelperMock = $this->getHelperMock('ops/data', array('isAdminSession'));
-        $dataHelperMock->expects($this->once())
-            ->method('isAdminSession')
-            ->will($this->returnValue(true));
-
         $fakeQuote = $this->getModelMock('sales/quote');
         $this->replaceByMock('model', 'sales/quote', $fakeQuote);
 
@@ -146,16 +141,12 @@ class Netresearch_OPS_Test_Helper_QuoteTest extends EcomDev_PHPUnit_Test_Case
         $sessionMock->setData('quote', $fakeQuote);
         $this->replaceByMock('singleton', 'adminhtml/session_quote', $sessionMock);
         $helper = Mage::helper('ops/quote');
-        $helper->setDataHelper($dataHelperMock);
         $this->assertEquals($fakeQuote, $helper->getQuote());
     }
 
     public function testGetQuoteWithCheckoutSession()
     {
-        $dataHelperMock = $this->getHelperMock('ops/data', array('isAdminSession'));
-        $dataHelperMock->expects($this->once())
-            ->method('isAdminSession')
-            ->will($this->returnValue(false));
+        Mage::app()->setCurrentStore(1);
 
         $fakeQuote = $this->getModelMock('sales/quote', array('setStoreId'));
         $fakeQuote->expects($this->any())
@@ -176,8 +167,8 @@ class Netresearch_OPS_Test_Helper_QuoteTest extends EcomDev_PHPUnit_Test_Case
             ->getMock();
         $sessionMock->setData('quote', $fakeQuote);
         $this->replaceByMock('singleton', 'checkout/session', $sessionMock);
+        /** @var Netresearch_OPS_Helper_Quote $helper */
         $helper = Mage::helper('ops/quote');
-        $helper->setDataHelper($dataHelperMock);
         $this->assertEquals($fakeQuote, $helper->getQuote());
     }
 

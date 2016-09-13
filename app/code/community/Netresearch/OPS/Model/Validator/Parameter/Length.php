@@ -49,7 +49,7 @@ class Netresearch_OPS_Model_Validator_Parameter_Length implements Zend_Validate_
                     $value = '';
                 }
                 if (0 < $maxLength) {
-                    if (false == Zend_Validate::is($value, 'StringLength', array('max' => $maxLength))) {
+                    if (false == Zend_Validate::is(utf8_encode($value), 'StringLength', array('max' => $maxLength, 'encoding' => 'utf-8'))) {
                         $this->messages[$key] = Mage::helper('ops/data')->__('value exceeds %d characters', $maxLength);
                         $validationResult = false;
                     }

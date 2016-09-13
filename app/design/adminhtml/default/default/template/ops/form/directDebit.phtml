@@ -9,7 +9,10 @@
  * @license OSL 3.0
  */
 ?>
-<?php $this->getParams(); ?>
+<?php
+/** @var Netresearch_OPS_Block_Form_DirectDebit $this */
+$this->getParams();
+?>
 <script type="text/javascript">
     Translator.add(
         'Account number must contain numbers only.',

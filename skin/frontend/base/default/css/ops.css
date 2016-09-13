@@ -1,24 +1,19 @@
 .ops-payment-paypage #ie_cc {
-    margin-top:20px;
+    margin-top: 20px;
 }
 
 .ops-payment-paypage #ie_cc td {
-    text-align:center;
+    text-align: center;
 }
 
 td .ncol {
-    position:    absolute;
+    position: absolute;
 }
 
 .ops-payment-paypage td .ncol {
-    position:    inherit;
-    left:        inherit;
-    width:       auto;
-}
-
-.ops-form-list #OPS_CC_BRAND {
-    width: 260px;
-    float: none;
+    position: inherit;
+    left: inherit;
+    width: auto;
 }
 
 .ops-form-list label {
@@ -45,7 +40,7 @@ td .ncol {
     border-width: 1px;
     color: #FFFFFF;
     cursor: pointer;
-    font: bold 12px arial,helvetica,sans-serif;
+    font: bold 12px arial, helvetica, sans-serif;
     padding: 0 7px 1px;
     text-align: center !important;
     white-space: nowrap;
@@ -70,7 +65,98 @@ td .ncol {
     color: #c6cbc7;
 }
 
-#ops_review_form input
-{
+#ops_review_form input {
     width: 255px;
+}
+
+#ops_placeform_iframe {
+    width: 100%;
+    min-height: 650px;
+    border: none;
+}
+
+.ops_htp_iframe {
+    height: 475px;
+    width: 100%;
+    border: none;
+    margin-top: 10px;
+}
+
+.ops_htp_loader {
+    text-align: center;
+}
+
+.ops-subscription-notice {
+    background-color: lightyellow;
+    padding: 10px 10px;
+    border: yellow 2px solid;
+    margin: 10px auto;
+}
+
+ul.ops-form-list.ops_card input[type=radio] {
+    display: none;
+}
+
+ul.ops-form-list.ops_card input[type=radio] + label {
+    display: block;
+    cursor: pointer;
+    padding: 5px 5px 27px 5px;
+    vertical-align: top;
+    width: auto;
+    border: 1px solid #636363;
+    margin: 5px;
+}
+
+ul.ops-form-list.ops_card input[type=radio] + label.new_alias_label {
+    display: block;
+    width: auto;
+    font-weight: bold;
+    margin-bottom: 0px;
+}
+
+ul.ops-form-list.ops_card input[type=radio]:checked + label.new_alias_label {
+    border-bottom: none;
+}
+
+ul.ops-form-list.ops_card input[type=radio]:checked + label,
+ul.ops-form-list.ops_card input[type=radio]:checked + label.new_alias_label + li.insert_payment_details {
+    background-color: #f4f4f4;
+    padding: 4px 4px 0px 4px;
+}
+
+li.insert_payment_details {
+    display: none;
+}
+
+ul.ops-form-list.ops_card input[type=radio]:checked + label.new_alias_label + li.insert_payment_details {
+    border: 1px solid #636363;
+    border-top: none;
+    padding: 4px 4px 4px 4px;
+    margin: 0 5px 5px 5px;
+    display: block;
+}
+
+ul.ops-form-list.ops_card input[type=radio] + label li.cvc {
+    height: 20px;
+}
+
+ul.ops-form-list.ops_card input[type=radio]:checked + label li.cvc input {
+    height: 18px;
+    display: inline-block;
+    width: 140px;
+    vertical-align: middle;
+    line-height: 18px;
+    padding: 0px;
+    margin-left: 10px;
+}
+
+ul.ops-form-list.ops_card input[type=radio]:checked + label li.cvc input + div.validation-advice {
+    float: right !important;
+}
+
+#opc-payment.section .ops-form-list li img {
+    height: 20px;
+    float: none;
+    display: inline;
+    vertical-align: middle;
 }

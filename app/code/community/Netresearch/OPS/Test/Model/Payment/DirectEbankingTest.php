@@ -9,16 +9,11 @@ class Netresearch_OPS_Test_Model_Payment_DirectEbankingTest extends EcomDev_PHPU
         $payment = Mage::getModel('sales/order_payment');
         $infoInstance = new Varien_Object();
 
-        $modelMock = $this->getModelMock('ops/payment_DirectEbanking', array('getPayment', 'getInfoInstance'));
-        $modelMock->expects($this->any())
-            ->method('getPayment')
-            ->will($this->returnValue($payment));
-        $modelMock->expects($this->any())
-                  ->method('getInfoInstance')
-                  ->will($this->returnValue($infoInstance));
-        $modelMock = $modelMock->assignData($data);
-        $this->assertEquals($modelMock->getOpsBrand(), 'DirectEbanking');
-        $this->assertEquals($modelMock->getOpsCode(), 'DirectEbanking');
+        $method = Mage::getModel('ops/payment_directEbanking');
+        $method->setInfoInstance(Mage::getModel('sales/quote_payment'));
+        $method = $method->assignData($data);
+        $this->assertEquals($method->getOpsBrand(), 'DirectEbanking');
+        $this->assertEquals($method->getOpsCode(), 'DirectEbanking');
     }
 
 }

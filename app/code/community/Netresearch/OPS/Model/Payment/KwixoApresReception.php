@@ -9,8 +9,7 @@
  */
 class Netresearch_OPS_Model_Payment_KwixoApresReception extends Netresearch_OPS_Model_Payment_Kwixo_Abstract
 {
-    
-    const OPS_CODE = "KWIXO_RNP";
+    protected $pm = 'KWIXO_RNP';
     
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
@@ -23,18 +22,4 @@ class Netresearch_OPS_Model_Payment_KwixoApresReception extends Netresearch_OPS_
     /** payment code */
     protected $_code = 'ops_kwixoApresReception';
 
-    public function getOpsCode($payment = null)
-    {
-        return self::OPS_CODE;
-    }
-    
-    /**
-     * getter for _code
-     * 
-     * @return string
-     */
-    public function getCode()
-    {
-        return $this->_code;
-    }
 }

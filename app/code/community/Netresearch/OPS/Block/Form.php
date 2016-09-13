@@ -27,8 +27,6 @@
 class Netresearch_OPS_Block_Form extends Mage_Payment_Block_Form_Cc
 {
 
-    private $aliasDataForCustomer = null;
-
     protected $pmLogo = null;
 
     protected $fieldMapping = array();
@@ -64,6 +62,10 @@ class Netresearch_OPS_Block_Form extends Mage_Payment_Block_Form_Cc
         return $this->config;
     }
 
+    /**
+     * @param Netresearch_OPS_Model_Config $config
+     * @return $this
+     */
     public function setConfig(Netresearch_OPS_Model_Config $config)
     {
         $this->config = $config;
@@ -71,16 +73,17 @@ class Netresearch_OPS_Block_Form extends Mage_Payment_Block_Form_Cc
         return $this;
     }
 
+    /**
+     * @return Mage_Sales_Model_Quote
+     */
     public function getQuote()
     {
         return Mage::getSingleton('checkout/session')->getQuote();
     }
 
-    public function getCcBrands()
-    {
-        return explode(',', $this->getConfig()->getAcceptedCcTypes());
-    }
-
+    /**
+     * @return array
+     */
     public function getDirectDebitCountryIds()
     {
         return explode(',', $this->getConfig()->getDirectDebitCountryIds());
@@ -91,218 +94,41 @@ class Netresearch_OPS_Block_Form extends Mage_Payment_Block_Form_Cc
         return explode(',', $this->getConfig()->getBankTransferCountryIds());
     }
 
+    /**
+     * @param null $storeId
+     * @return string
+     */
     public function getPSPID($storeId = null)
     {
         return Mage::getModel('ops/config')->getPSPID($storeId);
     }
 
-    public function getAliasAcceptUrl($storeId = null, $admin = false)
-    {
-        return Mage::getModel('ops/config')->getAliasAcceptUrl($storeId, $admin);
-    }
-
-    public function getAliasExceptionUrl($storeId = null, $admin = false)
-    {
-        return Mage::getModel('ops/config')->getAliasExceptionUrl($storeId, $admin);
-    }
-
-    public function getAliasGatewayUrl($storeId = null)
-    {
-        return Mage::getModel('ops/config')->getAliasGatewayUrl($storeId);
-    }
-
-    public function getSaveCcBrandUrl()
-    {
-        return Mage::getModel('ops/config')->getSaveCcBrandUrl();
-    }
-
+    /**
+     * @param null $storeId
+     * @param bool $admin
+     * @return string
+     */
     public function getGenerateHashUrl($storeId = null, $admin = false)
     {
         return Mage::getModel('ops/config')->getGenerateHashUrl($storeId, $admin);
     }
 
-    public function getCcSaveAliasUrl($storeId = null, $admin = false)
-    {
-        return Mage::getModel('ops/config')->getCcSaveAliasUrl($storeId, $admin);
-    }
-
-    public function getRegisterDirectDebitPaymentUrl()
-    {
-        return Mage::getModel('ops/config')->getRegisterDirectDebitPaymentUrl();
-    }
-
+    /**
+     * @return string
+     */
     public function getValidationUrl()
     {
         return Mage::getModel('ops/config')->getValidationUrl();
     }
 
+    /**
+     * @return array
+     */
     public function getDirectEbankingBrands()
     {
-
         return explode(',', $this->getConfig()->getDirectEbankingBrands());
     }
 
-    /**
-     * checks if the 'alias' payment method (!) is available
-     * no check for customer has aliases here
-     * just a passthrough of the isAvailable of Netresearch_OPS_Model_Payment_Abstract::isAvailable
-     *
-     * @return boolean
-     */
-    public function isAliasPMEnabled()
-    {
-        return Mage::getModel('ops/config')->isAliasManagerEnabled();
-    }
-
-    /**
-     *
-     * @return array empty or intersolve Vouchers
-     */
-    public function getInterSolveBrands()
-    {
-        $brands = array();
-        if ($this->getMethodCode() == 'ops_interSolve') {
-            $brands = Mage::getModel('ops/config')->getIntersolveBrands();
-        }
-        return $brands;
-    }
-
-    /**
-     * retrieves the alias data for the logged in customer
-     *
-     * @return array | null - array the alias data or null if the customer
-     * is not logged in
-     */
-    protected function getStoredAliasForCustomer()
-    {
-        if (Mage::helper('customer/data')->isLoggedIn()
-            && Mage::getModel('ops/config')->isAliasManagerEnabled()) {
-            $quote = $this->getQuote();
-            $alias = Mage::helper('ops/alias')->getAliasesForAddresses(
-                $quote->getCustomer()->getId(), $quote->getBillingAddress(),
-                $quote->getShippingAddress(), $quote->getStoreId()
-            )
-            ->addFieldToFilter('state', Netresearch_OPS_Model_Alias_State::ACTIVE)
-            ->setOrder('created_at', Varien_Data_Collection::SORT_ORDER_DESC)
-            ->getFirstItem();
-            $this->aliasDataForCustomer = $alias->getData();
-        }
-        return $this->aliasDataForCustomer;
-    }
-
-
-    /**
-     * retrieves single values to given keys from the alias data
-     *
-     * @param $key - string the key for the alias data
-     *
-     * @return null | string - null if key is not set in the alias data, otherwise
-     * the value for the given key from the alias data
-     *
-     */
-    protected function getStoredAliasDataForCustomer($key)
-    {
-        $returnValue = null;
-        $aliasData = null;
-        if (is_null($this->aliasData)) {
-            $aliasData = $this->getStoredAliasForCustomer();
-        }
-        if (is_array($aliasData) && array_key_exists($key, $aliasData)) {
-            $returnValue = $aliasData[$key];
-        }
-        return $returnValue;
-    }
-
-    /**
-     * retrieves the given path (month or year) from stored expiration date
-     *
-     * @param $key - the requested path
-     *
-     * @return null | string the extracted part of the date
-     */
-    public function getExpirationDatePart($key)
-    {
-        $returnValue = null;
-        $expirationDate = $this->getStoredAliasDataForCustomer('expiration_date');
-        // set expiration date to actual date if no stored Alias is used
-        if ($expirationDate === null) {
-            $expirationDate = date('my');
-        }
-        
-        if (0 < strlen(trim($expirationDate))
-        ) {
-            $expirationDateValues = str_split($expirationDate, 2);
-
-            if ($key == 'month') {
-                $returnValue = $expirationDateValues[0];
-            }
-            if ($key == 'year') {
-                $returnValue = $expirationDateValues[1];
-            }
-        }
-        return $returnValue;
-
-    }
-
-    /**
-     * retrieves the masked alias card number and formats it in a card specific format
-     *
-     * @return null|string - null if no alias data were found,
-     * otherwise the formatted card number
-     */
-    public function getAliasCardNumber()
-    {
-        $aliasCardNumber = $this->getStoredAliasDataForCustomer('pseudo_account_or_cc_no');
-        if (0 < strlen(trim($aliasCardNumber))) {
-            $aliasCardNumber = Mage::helper('ops/alias')->formatAliasCardNo(
-                $this->getStoredAliasDataForCustomer('brand'), $aliasCardNumber
-            );
-        }
-        return $aliasCardNumber;
-    }
-
-    /**
-     * @return null|string - the card holder either from alias data or
-     * the name from the the user who is logged in, null otherwise
-     */
-    public function getCardHolderName()
-    {
-        $cardHolderName = $this->getStoredAliasDataForCustomer('card_holder');
-        $customerHelper = Mage::helper('customer/data');
-        if ((is_null($cardHolderName) || 0 === strlen(trim($cardHolderName)))
-            && (!is_null($this->getStoredAlias('alias')))
-            && $customerHelper->isLoggedIn()
-            && Mage::getModel('ops/config')->isAliasManagerEnabled()
-        ) {
-            $cardHolderName = $customerHelper->getCustomerName();
-        }
-        return $cardHolderName;
-    }
-
-    /**
-     * the brand of the stored card data
-     *
-     * @return null|string - string if stored card data were found, null otherwise
-     */
-    public function getStoredAliasBrand()
-    {
-        $storedBrand = $this->getStoredAliasDataForCustomer('brand');
-        if (in_array($storedBrand, Mage::getModel('ops/config')->getInlinePaymentCcTypes())) {
-            return $storedBrand;
-        }
-        return '';
-    }
-
-    /**
-     * retrieves an old alias for re-usage or updating it
-     *
-     * @return null|string - string the stored alias for re-usage or
-     * null if no alias data were stored
-     */
-    public function getStoredAlias()
-    {
-        return $this->getStoredAliasDataForCustomer('alias');
-    }
 
     /**
      * wrapper for Netresearch_OPS_Helper_Data::checkIfUserRegistering
@@ -325,18 +151,6 @@ class Netresearch_OPS_Block_Form extends Mage_Payment_Block_Form_Cc
     }
 
     /**
-     * determines whether the hint is shown to guests or not
-     *
-     * @return bool true if alias feature is enabled and display the hint to
-     * guests is enabled
-     */
-    public function isAliasInfoBlockEnabled()
-    {
-        return ($this->isAliasPMEnabled()
-                && Mage::getModel('ops/config')->isAliasInfoBlockEnabled());
-    }
-
-    /**
      * @return string
      */
     public function getPmLogo()
@@ -344,7 +158,9 @@ class Netresearch_OPS_Block_Form extends Mage_Payment_Block_Form_Cc
         return $this->pmLogo;
     }
 
-
+    /**
+     * @return Simple_Xml
+     */
     protected function getFieldMapping()
     {
         return $this->getConfig()->getFrontendFieldMapping();
@@ -390,5 +206,11 @@ class Netresearch_OPS_Block_Form extends Mage_Payment_Block_Form_Cc
         }
 
         return $frontendFields;
+    }
+
+    public function getImageForBrand($brand)
+    {
+        $brandName = str_replace(' ', '', $brand);
+        return $this->getSkinUrl('images/ops/alias/brands/'. $brandName .'.png');
     }
 }

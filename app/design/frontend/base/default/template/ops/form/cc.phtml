@@ -1,0 +1,179 @@
+<?php
+/**
+ * @var Netresearch_OPS_Block_Form_Cc $this
+ */
+$_code = $this->getMethodCode();
+?>
+<script type="text/javascript">
+    Translator.add(
+        'Payment failed. Please select another payment method.',
+        '<?php echo Mage::helper('ops')->__('Payment failed. Please select another payment method.') ?>'
+    );
+    Translator.add(
+        'Payment failed. Please review your input or select another payment method.',
+        '<?php echo Mage::helper('ops')->__(
+            'Payment failed. Please review your input or select another payment method.'
+        ) ?>'
+    );
+    Translator.add(
+        'Incorrect credit card expiration date.',
+        '<?php echo Mage::helper('ops')->__('Incorrect credit card expiration date.') ?>'
+    );
+
+    Translator.add(
+        'LOAD_TOKEN',
+        '<?php echo $this->__('Please wait, while we load the PayEngine payment form.'); ?>'
+    );
+
+    Translator.add(
+        'SUCCESS_TOKEN',
+        "<?php echo $this->__(
+            "Your payment data is ready to be processed by PayEngine. You can <a href='javascript:void(0)' onclick='payment.handleBrandChange();'>reset it</a> or still select another payment method."
+        ); ?>"
+    );
+
+    Translator.add(
+        'FAILURE_TOKEN',
+        "<?php echo $this->__(
+            "Your payment data could not be saved by PayEngine. Please <a href='javascript:void(0)' onclick='payment.handleBrandChange();'>retry</a> or select another payment method."
+        ); ?>"
+    );
+    Translator.add(
+        'This is a required field.',
+        '<?php echo Mage::helper('ops')->__('This is a required field.') ?>'
+    );
+</script>
+<ul class="form-list ops-form-list ops_card" id="payment_form_<?php echo $_code ?>" style="display:none;">
+
+    <?php
+    $display = 'none';
+    $storedAliases = $this->getStoredAliasForCustomer();
+    $newAlias = Mage::helper('ops/alias')->getAlias($this->getQuote(), true);
+    ?>
+
+    <fieldset>
+        <?php foreach ($storedAliases as $key => $alias): ?>
+            <?php $brandName = $this->getStoredAliasBrand($alias->getId()) ?>
+            <input type="radio" id="<?php echo $alias->getId() ?>" name="payment[<?php echo $_code ?>][alias]"
+                   value="<?php echo $alias->getAlias() ?>"
+                   data-brand="<?php echo $brandName ?>"
+                   data-cn="<?php echo $this->getCardHolderName($alias->getId()) ?>"
+                   required/>
+            <label for="<?php echo $alias->getId() ?>">
+                <ul>
+                    <li><?php echo $this->__('Name on Card') . ': ' . $this->getCardHolderName($alias->getId()) ?></li>
+                    <li><?php echo $this->__('Credit Card Number') . ': ' . $this->getAliasCardNumber(
+                                $alias->getId()
+                            ) ?></li>
+                    <li>
+                        <?php echo $this->__('Credit Card Type:') ?>
+                        <img src="<?php echo $this->getImageForBrand($brandName) ?>" alt="<?php echo $brandName ?>">
+                    </li>
+                    <li><?php echo $this->__('Expiration Date') . ': ' . $this->getExpirationDatePart(
+                                $alias->getId(), 'complete'
+                            ) ?></li>
+
+                    <li class="cvc" style="display: none;">
+                        <label class="required" for="<?php echo strtoupper($_code) ?>_CVC_<?php echo $alias->getId(
+                        ) ?>"><?php echo $this->__('Card Verification Number'); ?><em>*</em></label>
+                        <input title="<?php echo $this->__('Card Verification Number'); ?>"
+                               class="input-text required-entry"
+                               type="text" name="payment[<?php echo $_code ?>][cvc]"
+                               id="<?php echo strtoupper($_code) ?>_CVC_<?php echo $alias->getId() ?>" length="6"/>
+
+                    </li>
+                </ul>
+            </label>
+        <?php endforeach; ?>
+        <?php if (count($storedAliases) > 0): ?>
+            <input type="select" id="<?php echo $_code; ?>_stored_alias_brand"
+                   name="payment[<?php echo $_code; ?>][CC_BRAND]" class="hidden">
+            <?php foreach ($this->getAliasBrands() as $brand) : ?>
+                <option value="<?php echo $brand; ?>" class="hidden">
+                    <?php echo $this->__($brand); ?>
+                </option>
+            <?php endforeach; ?>
+        <?php endif; ?>
+        </input>
+        <input type="radio" id="new_alias_<?php echo $_code ?>" name="payment[<?php echo $_code ?>][alias]"
+               class="validate-one-required-by-name" value="" <?php echo empty($storedAliases)
+            ? 'checked' : ''; ?> required>
+        <label for="new_alias_<?php echo $_code ?>" class="new_alias_label"> <?php echo $this->__(
+                'Enter new credit card data...'
+            ) ?> </label>
+        <li id="insert_payment_details_<?php echo $_code ?>" class="insert_payment_details" style="">
+            <label class="required" for="<?php echo strtoupper($_code) ?>_BRAND"
+                   id="<?php echo strtoupper($_code) ?>_BRAND_LABEL"><?php echo $this->__(
+                    'Credit Card Type'
+                ); ?></label><br/>
+            <select title="<?php echo strtoupper($_code) ?>_BRAND" class="required-entry" autocomplete="off"
+                    name="payment[<?php echo $_code; ?>][CC_BRAND]" id="<?php echo strtoupper($_code) ?>_BRAND">
+                <option value=""><?php echo $this->__('--Please select--') ?></option>
+                <?php foreach ($this->getCCBrands() as $brand) : ?>
+                    <option value="<?php echo $brand; ?>">
+                        <?php echo $this->__($brand); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+
+            <div id="<?php echo $_code ?>_loader" class="ops_htp_loader" style="display: none;"></div>
+            <iframe id="ops_iframe_<?php echo $_code ?>" class="ops_htp_iframe" style="display: none;"
+                    src="about:blank"></iframe>
+            <p id="<?php echo $_code ?>_redirect_note" class="ops_htp_redirect"
+               style="display: none;"><?php echo $this->__(
+                    'You will be redirected to PayEngine website when you place an order.'
+                ) ?></p>
+        </li>
+
+        <script type="text/javascript">
+            opsHashUrl = '<?php echo $this->getGenerateHashUrl(); ?>';
+            opsOrderId = '<?php echo $this->getQuote()->getId(); ?>';
+            opsPspid = '<?php echo $this->getPSPID(); ?>';
+            opsAcceptUrl = '<?php echo $this->getAliasAcceptUrl(); ?>';
+            opsExceptionUrl = '<?php echo $this->getAliasExceptionUrl(); ?>';
+            opsUrl = '<?php echo $this->getAliasGatewayUrl(); ?>';
+            opsAlias = '';
+
+            paramplus = 'RESPONSEFORMAT=JSON';
+
+            <?php echo $_code ?> = {
+                'code': '<?php echo $_code ?>',
+                'loader': $('<?php echo $_code ?>_loader'),
+                'tokenizationFrame': $('ops_iframe_<?php echo $_code ?>'),
+                'redirectNote': $('<?php echo $_code ?>_redirect_note'),
+                'brandsForAliasInterface': '<?php echo json_encode(
+                    $this->getMethod()->getBrandsForAliasInterface()
+                ) ?>'.evalJSON(),
+                'aliasManager': <?php echo $this->getConfig()->isAliasManagerEnabled($this->getMethodCode()) ? 'true' : 'false' ?>
+            };
+            locale = '<?php echo Mage::app()->getLocale()->getLocaleCode(); ?>';
+            transmitPaymentMethod = false;
+
+            Event.observe('<?php echo strtoupper($_code); ?>_BRAND', 'change', function () {
+                payment.handleBrandChange();
+            });
+
+            Event.observe(<?php echo $_code ?>.tokenizationFrame, 'load', function () {
+                payment.onOpsIframeLoad();
+            }
+            )
+            ;
+
+            Event.observe(document, 'alias:success', function (event) {
+                payment.fillOpsLoader('SUCCESS_TOKEN');
+                payment.toggleContinue(true);
+                payment.opsAliasSuccess = true;
+                $('new_alias_' + payment.currentMethod).value = event.memo;
+                payment.save();
+            });
+
+            Event.observe(document, 'alias:failure', function (event) {
+                payment.opsAliasSuccess = false;
+                payment.currentMethodObject.tokenizationFrame.src = 'about:blank';
+                payment.fillOpsLoader('FAILURE_TOKEN');
+                payment.toggleContinue(false);
+            });
+
+        </script>
+    </fieldset>
+</ul>

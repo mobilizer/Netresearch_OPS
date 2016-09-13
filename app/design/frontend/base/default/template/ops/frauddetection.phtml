@@ -1,8 +1,10 @@
 <?php
+/** @var Netresearch_OPS_Block_Frauddetection $this */
 $aid = $this->getTrackingCodeAid();
 $sid = $this->getTrackingSid();
 ?>
 <script type="text/javascript">
+    //<![CDATA[
     (function () {
         var rd = document.createElement('script');
         rd.type = 'text/javascript';
@@ -13,6 +15,7 @@ $sid = $this->getTrackingSid();
         var s = document.getElementsByTagName('script')[0];
         s.parentNode.insertBefore(rd, s);
     })();
+    //]]>
 </script>
 <noscript><p
         style="background:url(//elistva.com/api/assets/clear.png?aid=<?php echo $aid ?>&sid=<?php echo $sid ?>)"></p>

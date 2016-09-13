@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_PostFinanceEFinance
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'PostFinance e-finance';
+    protected $brand = 'PostFinance e-finance';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -18,11 +21,5 @@ class Netresearch_OPS_Model_Payment_PostFinanceEFinance
 
     /** payment code */
     protected $_code = 'ops_postFinanceEFinance';
-
-    /** ops payment code */
-    public function getOpsCode($payment=null)
-    {
-        return 'PostFinance e-finance';
-    }
 }
 

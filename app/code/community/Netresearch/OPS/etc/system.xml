@@ -37,7 +37,7 @@
             <show_in_store>1</show_in_store>
             <groups>
                 <ops_support translate="label">
-                    <label>Ingenico Payment Services Information</label>
+                    <label>PayEngine Information</label>
                     <frontend_type>text</frontend_type>
                     <frontend_model>ops/system_config_support</frontend_model>
                     <sort_order>0</sort_order>
@@ -46,15 +46,17 @@
                     <show_in_store>1</show_in_store>
                 </ops_support>
                 <ops translate="label comment" module="ops">
-                    <label>Ingenico Payment Services Account</label>
+                    <label>PayEngine Account</label>
                     <frontend_type>text</frontend_type>
                     <sort_order>1</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
                     <show_in_store>1</show_in_store>
                     <fields>
-                        <debug_flag translate="label">
+                        <debug_flag translate="label tooltip comment">
                             <label>Debug</label>
+                            <tooltip>This will log requests and responses in /var/log/ops.log</tooltip>
+                            <comment>Make sure the global Magento logging is also enabled.</comment>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
                             <sort_order>2000</sort_order>
@@ -79,81 +81,122 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </pspid>
-                        <secret_key_out translate="label comment">
+                        <secret_key_type translate="label comment tooltip">
+                            <label>Hash algorithm</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>ops/system_config_backend_hashMethods</source_model>
+                            <sort_order>49</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <tooltip><![CDATA[This must be identical to the value in the PayEngine backend in section <em>Technical information</em> on tab <em>Global security parameters</em>.]]></tooltip>
+                        </secret_key_type>
+                        <secret_key_in translate="label comment tooltip">
                             <label>SHA-IN Pass phrase</label>
-                            <comment><![CDATA[Refer to Ingenico Payment Services's backend in section <em>Technical Information</em> on tab <em>Data and origin verification</em>.]]></comment>
+                            <comment><![CDATA[Refer to PayEngine's backend in section <em>Technical Information</em> on tab <em>Data and origin verification</em>.]]></comment>
+                            <tooltip><![CDATA[This must be identical to the value in the PayEngine backend in section <em>Technical information</em> on tab <em>Data and origin verification</em>.]]></tooltip>
                             <backend_model>adminhtml/system_config_backend_encrypted</backend_model>
                             <frontend_type>obscure</frontend_type>
                             <sort_order>50</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
-                        </secret_key_out>
-                        <secret_key_in translate="label comment">
+                        </secret_key_in>
+                        <secret_key_out translate="label comment tooltip">
                             <label>SHA-OUT Pass phrase</label>
-                            <comment><![CDATA[Refer to Ingenico Payment Services's backend in section <em>Technical Information</em> on tab <em>Transaction feedback</em>.]]></comment>
+                            <comment><![CDATA[Refer to PayEngine's backend in section <em>Technical Information</em> on tab <em>Transaction feedback</em>.]]></comment>
+                            <tooltip><![CDATA[This must be identical to the value in the PayEngine backend in section <em>Technical information</em> on tab <em>Transaction feedback</em>.]]></tooltip>
                             <backend_model>adminhtml/system_config_backend_encrypted</backend_model>
                             <frontend_type>obscure</frontend_type>
                             <sort_order>60</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
-                        </secret_key_in>
+                        </secret_key_out>
+                        <mode translate="label comment tooltip">
+                            <label>Mode</label>
+                            <tooltip><![CDATA[Depending on the selection the extension will communicate with the PayEngine test or production service. Choose custom, if you have to use special urls for the gateway.]]></tooltip>
+                            <sort_order>69</sort_order>
+                            <frontend_type>select</frontend_type>
+                            <source_model>ops/source_mode</source_model>
+                            <frontend_model>ops/system_config_mode</frontend_model>
+                            <comment><![CDATA[<p id="ops_mode_comment" style="color:red; display:none;">Please note that, after changing this value, you might also need to update additional fields like API-User and password, PSPID or SHA-IN/OUT pass phrase.</p>]]></comment>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </mode>
                         <frontend_gateway translate="label comment">
                             <label>Frontend Gateway URL</label>
                             <frontend_type>text</frontend_type>
-                            <comment><![CDATA[Test url example: https://secure.ogone.com/ncol/test/orderstandard_utf8.asp<br />Production url example: https://secure.ogone.com/ncol/prod/orderstandard_utf8.asp]]></comment>
+                            <comment><![CDATA[Test url example: https://secure.payengine.de/ncol/test/orderstandard_utf8.asp<br />Production url example: https://secure.payengine.de/ncol/prod/orderstandard_utf8.asp]]></comment>
                             <sort_order>70</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <mode>custom</mode>
+                            </depends>
                         </frontend_gateway>
                         <ops_alias_gateway translate="label comment">
                             <label>Alias Gateway URL</label>
                             <frontend_type>text</frontend_type>
-                            <comment><![CDATA[Test url example: https://secure.ogone.com/ncol/test/alias_gateway_utf8.asp<br />Production url example: https://secure.ogone.com/ncol/prod/alias_gateway_utf8.asp]]></comment>
+                            <comment><![CDATA[Test url example: https://secure.payengine.de/ncol/test/Tokenization/HostedPage<br />Production url example: https://secure.payengine.de/ncol/prod/Tokenization/HostedPage]]></comment>
                             <sort_order>71</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <mode>custom</mode>
+                            </depends>
                         </ops_alias_gateway>
                         <directlink_gateway translate="label comment">
                             <label>DirectLink Gateway URL</label>
                             <frontend_type>text</frontend_type>
-                            <comment><![CDATA[Test url example: https://secure.ogone.com/ncol/test/maintenancedirect.asp<br />Production url example: https://secure.ogone.com/ncol/prod/maintenancedirect.asp]]></comment>
+                            <comment><![CDATA[Test url example: https://secure.payengine.de/ncol/test/maintenancedirect.asp<br />Production url example: https://secure.payengine.de/ncol/prod/maintenancedirect.asp]]></comment>
                             <sort_order>72</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <mode>custom</mode>
+                            </depends>
                         </directlink_gateway>
                         <directlink_gateway_order translate="label comment">
                             <label>DirectLink Gateway Order URL</label>
                             <frontend_type>text</frontend_type>
-                            <comment><![CDATA[Test url example: https://secure.ogone.com/ncol/test/orderdirect.asp<br />Production url example: https://secure.ogone.com/ncol/prod/orderdirect.asp]]></comment>
+                            <comment><![CDATA[Test url example: https://secure.payengine.de/ncol/test/orderdirect.asp<br />Production url example: https://secure.payengine.de/ncol/prod/orderdirect.asp]]></comment>
                             <sort_order>73</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <mode>custom</mode>
+                            </depends>
                         </directlink_gateway_order>
                         <directlink_maintenance_api translate="label comment">
                             <label>DirectLink Maintenance API URL</label>
                             <frontend_type>text</frontend_type>
-                            <comment><![CDATA[Test url example: https://secure.ogone.com/ncol/test/querydirect.asp<br />Production url example: https://secure.ogone.com/ncol/prod/querydirect.asp]]></comment>
+                            <comment><![CDATA[Test url example: https://secure.payengine.de/ncol/test/querydirect.asp<br />Production url example: https://secure.payengine.de/ncol/prod/querydirect.asp]]></comment>
                             <sort_order>74</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <mode>custom</mode>
+                            </depends>
                         </directlink_maintenance_api>
-                        <api_userid>
+                        <api_userid translate="label tooltip">
                             <label>API User</label>
+                            <tooltip><![CDATA[Special user for API must be created in the PayEngine backend in section <em>Users</em>.]]></tooltip>
                             <frontend_type>text</frontend_type>
                             <sort_order>85</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </api_userid>
-                        <api_pswd>
+                        <api_pswd translate="label tooltip">
                             <label>API Password</label>
+                            <tooltip><![CDATA[Password which has been set in the PayEngine backend for above API user.]]></tooltip>
                             <backend_model>adminhtml/system_config_backend_encrypted</backend_model>
                             <frontend_type>obscure</frontend_type>
                             <sort_order>88</sort_order>
@@ -161,8 +204,9 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </api_pswd>
-                        <payment_action translate="label comment">
+                        <payment_action translate="label comment tooltip">
                             <label>Payment Action</label>
+                            <tooltip><![CDATA[This setting will override the configuration in the PayEngine backend in section <em>Technical information</em> on tab <em>Global transaction parameters</em>.]]></tooltip>
                             <frontend_type>select</frontend_type>
                             <source_model>ops/source_paymentAction</source_model>
                             <sort_order>90</sort_order>
@@ -186,55 +230,91 @@
                             <label>Payment Template</label>
                             <frontend_type>select</frontend_type>
                             <source_model>ops/source_template</source_model>
-                            <comment>If you choose "Ingenico Payment Services", you will need to fill in all the following fields.</comment>
+                            <comment>
+                                <model>ops/system_config_template</model>
+                            </comment>
                             <sort_order>100</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
-                            <show_in_store>0</show_in_store>
+                            <show_in_store>1</show_in_store>
+                            <tooltip><![CDATA[For an easier PCI compliance we recommend redirect mode, iFrame mode or dynamic template with the template hosted on PayEngine servers.]]></tooltip>
                         </template>
+                        <template_identifier translate="label comment">
+                            <label>Template Identifier/Url</label>
+                            <tooltip>Enter the TemplateRootId you received from PayEngine or the url to an external template.</tooltip>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>102</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <depends>
+                                <template>ops_template</template>
+                            </depends>
+                            <validate>required-entry</validate>
+                        </template_identifier>
                         <html_title translate="label comment">
-                            <label>Title of the Ingenico Payment Services Template</label>
+                            <label>Title of the PayEngine Template</label>
                             <frontend_type>text</frontend_type>
                             <sort_order>110</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </html_title>
                         <bgcolor translate="label comment">
-                            <label>Background Color of Ingenico Payment Services Template</label>
+                            <label>Background Color of PayEngine Template</label>
                             <frontend_type>text</frontend_type>
                             <comment><![CDATA[e.g: white]]></comment>
                             <sort_order>130</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </bgcolor>
                         <txtcolor translate="label comment">
-                            <label>Text Color of the Ingenico Payment Services Template</label>
+                            <label>Text Color of the PayEngine Template</label>
                             <frontend_type>text</frontend_type>
                             <comment><![CDATA[e.g: black]]></comment>
                             <sort_order>140</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </txtcolor>
                         <tblbgcolor translate="label comment">
-                            <label>Table Background Color of the Ingenico Payment Services Template</label>
+                            <label>Table Background Color of the PayEngine Template</label>
                             <frontend_type>text</frontend_type>
                             <comment><![CDATA[e.g: white]]></comment>
                             <sort_order>150</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </tblbgcolor>
                         <tbltxtcolor translate="label comment">
-                            <label>Table Text Color of the Ingenico Payment Services Template</label>
+                            <label>Table Text Color of the PayEngine Template</label>
                             <frontend_type>text</frontend_type>
                             <comment><![CDATA[e.g: black]]></comment>
                             <sort_order>160</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </tbltxtcolor>
                         <showcatalogbutton translate="label">
                             <label>Show catalog button</label>
@@ -244,6 +324,10 @@
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </showcatalogbutton>
                         <showhomebutton translate="label">
                             <label>Show home button</label>
@@ -253,41 +337,61 @@
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </showhomebutton>
                         <buttonbgcolor translate="label">
-                            <label>Button Background Color of the Ingenico Payment Services Template</label>
+                            <label>Button Background Color of the PayEngine Template</label>
                             <frontend_type>text</frontend_type>
                             <sort_order>170</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </buttonbgcolor>
                         <buttontxtcolor translate="label comment">
-                            <label>Button Text Color of the Ingenico Payment Services Template</label>
+                            <label>Button Text Color of the PayEngine Template</label>
                             <frontend_type>text</frontend_type>
                             <comment><![CDATA[e.g: white]]></comment>
                             <sort_order>180</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </buttontxtcolor>
                         <fonttype translate="label comment">
-                            <label>Font Family of the Ingenico Payment Services Template</label>
+                            <label>Font Family of the PayEngine Template</label>
                             <frontend_type>text</frontend_type>
                             <comment><![CDATA[e.g: Verdana]]></comment>
                             <sort_order>190</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </fonttype>
                         <logo translate="label comment">
-                            <label>Logo of the Ingenico Payment Services Template</label>
+                            <label>Logo of the PayEngine Template</label>
                             <frontend_type>text</frontend_type>
                             <comment>URL/filename of the logo. The URL must be absolute and stored on a secure server.</comment>
                             <sort_order>200</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </logo>
                         <pmlist translate="label comment">
                             <label>Layout of Payment Methods</label>
@@ -297,10 +401,14 @@
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
+                            <depends>
+                                <template separator=",">ops,ops_iframe</template>
+                            </depends>
+                            <validate>required-entry</validate>
                         </pmlist>
                         <redirectOrderReference translate="label comment">
                             <label>Order reference in case of redirect payments</label>
-                            <comment>See chapter 'configuration', section 'Magento - Backend in the documentation'. Please note that the option 'orderId' is not used for inline payments and the Kwixo payment methods.</comment>
+                            <comment>See chapter 'configuration', section 'Magento - Backend in the documentation'. Please note that the option 'orderId' is not used the Kwixo payment methods.</comment>
                             <frontend_type>select</frontend_type>
                             <source_model>ops/source_orderReference</source_model>
                             <sort_order>220</sort_order>
@@ -327,17 +435,9 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </showQuoteIdInOrderGrid>
-                        <enableTrackingCode translate="label">
-                            <label>Device ID</label>
-                            <frontend_type>select</frontend_type>
-                            <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>240</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                        </enableTrackingCode>
-                        <submitExtraParameters translate="label comment">
+                        <submitExtraParameters translate="label comment tooltip">
                             <label>Submit extra parameters</label>
+                            <tooltip><![CDATA[Only enable this if you wish to use Fraud Detection.]]></tooltip>
                             <comment>Enable this if you wish to use fraud detection</comment>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
@@ -346,49 +446,107 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </submitExtraParameters>
+                        <resendPaymentInfo_identity translate="label tooltip">
+                            <label>Resend payment information identity</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_email_identity</source_model>
+                            <sort_order>250</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <tooltip>Sender identity. See 'Store Email Adresses'.</tooltip>
+                        </resendPaymentInfo_identity>
+                        <resendPaymentInfo_template translate="label tooltip">
+                            <label>Resend payment information template</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_email_template</source_model>
+                            <sort_order>260</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <tooltip>The email template to use. Choose 'Default Template from Locale' to use PayEngine extensions default template.</tooltip>
+                        </resendPaymentInfo_template>
+                        <device_fingerprinting translate="label tooltip comment">
+                            <label>Enable device fingerprinting</label>
+                            <comment>When enabling this, you still need to request the explicit consent of the customer in the checkout to transmit this data.</comment>
+                            <tooltip>This functionality will transmit specific customer data as hash to PayEngine to identify the device from which the transaction was sent can be identified with the highest probability.</tooltip>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>280</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>0</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </device_fingerprinting>
+                        <ops_rtimeout translate="label tooltip comment">
+                            <label>Timeout for transactions</label>
+                            <comment>This value specifies the request timeout for that transaction. A value between 30 and 60 is possible.</comment>
+                            <frontend_type>text</frontend_type>
+                            <validate>validate-digits-range digits-range-30-60</validate>
+                            <sort_order>290</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>0</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </ops_rtimeout>
+                        <creditdebit_split translate="label tooltip comment">
+                            <label>Credit/Debit card Split</label>
+                            <tooltip><![CDATA[If activated an extra parameter is transmitted to PayEngine for the Creditcard/Debitcard payment methods.]]></tooltip>
+                            <comment><![CDATA[See also <a title='Split credit/debit cards' target='_blank' href='https://payment-services.ingenico.com/int/en/ogone/support/guides/integration%20guides/split-credit-debit-cards'>PayEngine documentation</a>.]]></comment>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>300</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </creditdebit_split>
+                        <billing_day_month translate="label tooltip">
+                            <label>Billing day for monthly subscriptions</label>
+                            <frontend_type>text</frontend_type>
+                            <validate>validate-digits validate-digits-range digits-range-1-31</validate>
+                            <sort_order>300</sort_order>
+                            <tooltip>Determines the day of the month when a monthly subscription gets triggered.</tooltip>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </billing_day_month>
+                        <billing_day_week translate="label tooltip">
+                            <label>Billing day for weekly subscriptions</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_locale_weekdays</source_model>
+                            <sort_order>310</sort_order>
+                            <tooltip>Determines the day of the week when a weekly subscription gets triggered.</tooltip>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </billing_day_week>
+                        <suspendSubscription_identity translate="label tooltip">
+                            <label>Store contact responsible for subscription handling</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_email_identity</source_model>
+                            <sort_order>320</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <tooltip>This contact will receive the suspend/cancel requests for the subscriptions. See 'Store Email Adresses'.</tooltip>
+                        </suspendSubscription_identity>
+                        <suspendSubscription_template translate="label tooltip">
+                            <label>E-Mail template for suspending/canceling a subscription</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_email_template</source_model>
+                            <sort_order>330</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <tooltip>This e-mail template is used for the automatically generated e-mail that is getting sent to the corresponding contact, if a customer wants to cancel a subscription.</tooltip>
+                        </suspendSubscription_template>
                     </fields>
                 </ops>
             </groups>
         </payment_services>
         <payment>
             <groups>
-                <ops_wallie translate="label">
-                    <label>Ingenico Payment Services Wallie</label>
-                    <sort_order>12</sort_order>
-                    <show_in_default>1</show_in_default>
-                    <show_in_website>1</show_in_website>
-                    <show_in_store>1</show_in_store>
-                    <fields>
-                        <active translate="label">
-                            <label>Enabled</label>
-                            <frontend_type>select</frontend_type>
-                            <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>1</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>0</show_in_store>
-                        </active>
-                        <title translate="label">
-                            <label>Title</label>
-                            <frontend_type>text</frontend_type>
-                            <sort_order>10</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                            <validate>required-entry</validate>
-                        </title>
-                        <sort_order translate="label">
-                            <label>Sort Order</label>
-                            <frontend_type>text</frontend_type>
-                            <sort_order>20</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                        </sort_order>
-                    </fields>
-                </ops_wallie>
+
                 <ops_directDebit translate="label">
-                    <label>Ingenico Payment Services DirectDebit</label>
+                    <label>PayEngine DirectDebit</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -444,43 +602,8 @@
                         </backend_enabled>
                     </fields>
                 </ops_directDebit>
-                <ops_tunz translate="label">
-                    <label>Ingenico Payment Services Tunz</label>
-                    <sort_order>12</sort_order>
-                    <show_in_default>1</show_in_default>
-                    <show_in_website>1</show_in_website>
-                    <show_in_store>1</show_in_store>
-                    <fields>
-                        <active translate="label">
-                            <label>Enabled</label>
-                            <frontend_type>select</frontend_type>
-                            <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>1</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>0</show_in_store>
-                        </active>
-                        <title translate="label">
-                            <label>Title</label>
-                            <frontend_type>text</frontend_type>
-                            <sort_order>10</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                            <validate>required-entry</validate>
-                        </title>
-                        <sort_order translate="label">
-                            <label>Sort Order</label>
-                            <frontend_type>text</frontend_type>
-                            <sort_order>20</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                        </sort_order>
-                    </fields>
-                </ops_tunz>
                 <ops_postFinanceEFinance translate="label">
-                    <label>Ingenico Payment Services PostFinanceEFinance</label>
+                    <label>PayEngine PostFinanceEFinance</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -515,7 +638,7 @@
                     </fields>
                 </ops_postFinanceEFinance>
                 <ops_eDankort translate="label">
-                    <label>Ingenico Payment Services EDankort</label>
+                    <label>PayEngine EDankort</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -550,7 +673,7 @@
                     </fields>
                 </ops_eDankort>
                 <ops_kbcOnline translate="label">
-                    <label>Ingenico Payment Services KbcOnline</label>
+                    <label>PayEngine KbcOnline</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -585,7 +708,7 @@
                     </fields>
                 </ops_kbcOnline>
                 <ops_iDeal translate="label">
-                    <label>Ingenico Payment Services IDeal</label>
+                    <label>PayEngine iDEAL</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -620,7 +743,7 @@
                     </fields>
                 </ops_iDeal>
                 <ops_belfiusDirectNet translate="label">
-                    <label>Ingenico Payment Services Belfius Direct Net</label>
+                    <label>PayEngine Belfius Direct Net</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -655,7 +778,7 @@
                     </fields>
                 </ops_belfiusDirectNet>
                 <ops_bankTransfer translate="label">
-                    <label>Ingenico Payment Services BankTransfer</label>
+                    <label>PayEngine BankTransfer</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -703,7 +826,7 @@
                     </fields>
                 </ops_bankTransfer>
                 <ops_openInvoiceDe translate="label">
-                    <label>Ingenico Payment Services Open Invoice DE</label>
+                    <label>PayEngine Open Invoice DE</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -713,7 +836,7 @@
                             <label>Enabled</label>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <comment>Please make sure that you enabled customer gender and customer date of birth in customer attributes configuration. Otherwise this payment method won't be available. Please be informed that when you use AfterPay as acquirer on Ingenico Payment Services side, it's not possible to perform partial captures.</comment>
+                            <comment><![CDATA[Make sure that <em>gender</em> and <em>date of birth</em> are required fields in the checkout. Otherwise this payment method will not be displayed.]]></comment>
                             <sort_order>1</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
@@ -728,6 +851,16 @@
                             <show_in_store>1</show_in_store>
                             <validate>required-entry</validate>
                         </title>
+                        <allow_discounted_carts translate="label">
+                            <label>Allow for discounted carts</label>
+                            <comment>Allow payment method for discounted carts. Please note that not all aquirers support transmission of discount items.</comment>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </allow_discounted_carts>
                         <sort_order translate="label">
                             <label>Sort Order</label>
                             <frontend_type>text</frontend_type>
@@ -738,8 +871,8 @@
                         </sort_order>
                     </fields>
                 </ops_openInvoiceDe>
-                <ops_openInvoiceNl translate="label">
-                    <label>Ingenico Payment Services Open Invoice NL</label>
+                <ops_openInvoiceAt translate="label">
+                    <label>PayEngine Open Invoice AT</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -749,7 +882,53 @@
                             <label>Enabled</label>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <comment>Please make sure that you enabled customer gender and customer date of birth in customer attributes configuration. Otherwise this payment method won't be available. Please be informed that, if you use AfterPay as acquirer on Ingenico Payment Services side, it's not possible to perform partial captures.</comment>
+                            <comment><![CDATA[Make sure that <em>gender</em> and <em>date of birth</em> are required fields in the checkout. Otherwise this payment method will not be displayed.]]></comment>
+                            <sort_order>1</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </active>
+                        <title translate="label">
+                            <label>Title</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <validate>required-entry</validate>
+                        </title>
+                        <allow_discounted_carts translate="label">
+                            <label>Allow for discounted carts</label>
+                            <comment>Allow payment method for discounted carts. Please note that not all aquirers support transmission of discount items.</comment>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </allow_discounted_carts>
+                        <sort_order translate="label">
+                            <label>Sort Order</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </sort_order>
+                    </fields>
+                </ops_openInvoiceAt>
+                <ops_openInvoiceNl translate="label">
+                    <label>PayEngine Open Invoice NL</label>
+                    <sort_order>12</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <fields>
+                        <active translate="label comment">
+                            <label>Enabled</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <comment><![CDATA[Make sure that <em>gender</em> and <em>date of birth</em> are required fields in the checkout. Otherwise this payment method will not be displayed.]]></comment>
                             <sort_order>1</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
@@ -775,7 +954,7 @@
                     </fields>
                 </ops_openInvoiceNl>
                 <ops_cbcOnline translate="label">
-                    <label>Ingenico Payment Services CbcOnline</label>
+                    <label>PayEngine CbcOnline</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -810,7 +989,7 @@
                     </fields>
                 </ops_cbcOnline>
                 <ops_giroPay translate="label">
-                    <label>Ingenico Payment Services GiroPay</label>
+                    <label>PayEngine GiroPay</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -844,8 +1023,8 @@
                         </sort_order>
                     </fields>
                 </ops_giroPay>
-                <ops_interSolve translate="label">
-                    <label>Ingenico Payment Services InterSolve</label>
+                <ops_Masterpass translate="label">
+                    <label>PayEngine Masterpass</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -877,20 +1056,55 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </sort_order>
-                        <brands translate="comment">
-                            <label></label>
+                    </fields>
+                </ops_Masterpass>
+                <ops_interSolve translate="label">
+                    <label>PayEngine InterSolve</label>
+                    <sort_order>12</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <fields>
+                        <active translate="label">
+                            <label>Enabled</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>1</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </active>
+                        <title translate="label">
+                            <label>Title</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <validate>required-entry</validate>
+                        </title>
+                        <sort_order translate="label">
+                            <label>Sort Order</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </sort_order>
+                        <brands translate="label comment">
+                            <label>Brand</label>
                             <frontend_model>ops/system_config_form_field_brand</frontend_model>
                             <backend_model>ops/system_config_backend_intersolve_brands</backend_model>
                             <sort_order>30</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
-                            <comment>Add one or more brands. In field "BRAND" you will have to enter the value you got from Ingenico Payment Services.</comment>
+                            <comment>Add one or more brands. In field "BRAND" you will have to enter the value you got from PayEngine.</comment>
                         </brands>
                     </fields>
                 </ops_interSolve>
                 <ops_cashU translate="label">
-                    <label>Ingenico Payment Services CashU</label>
+                    <label>PayEngine CashU</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -925,7 +1139,7 @@
                     </fields>
                 </ops_cashU>
                 <ops_mpass translate="label">
-                    <label>Ingenico Payment Services Mpass</label>
+                    <label>PayEngine Mpass</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -959,78 +1173,8 @@
                         </sort_order>
                     </fields>
                 </ops_mpass>
-                <ops_miniTix translate="label">
-                    <label>Ingenico Payment Services MiniTix</label>
-                    <sort_order>12</sort_order>
-                    <show_in_default>1</show_in_default>
-                    <show_in_website>1</show_in_website>
-                    <show_in_store>1</show_in_store>
-                    <fields>
-                        <active translate="label">
-                            <label>Enabled</label>
-                            <frontend_type>select</frontend_type>
-                            <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>1</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>0</show_in_store>
-                        </active>
-                        <title translate="label">
-                            <label>Title</label>
-                            <frontend_type>text</frontend_type>
-                            <sort_order>10</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                            <validate>required-entry</validate>
-                        </title>
-                        <sort_order translate="label">
-                            <label>Sort Order</label>
-                            <frontend_type>text</frontend_type>
-                            <sort_order>20</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                        </sort_order>
-                    </fields>
-                </ops_miniTix>
-                <ops_cod translate="label">
-                    <label>Ingenico Payment Services Cod</label>
-                    <sort_order>12</sort_order>
-                    <show_in_default>1</show_in_default>
-                    <show_in_website>1</show_in_website>
-                    <show_in_store>1</show_in_store>
-                    <fields>
-                        <active translate="label">
-                            <label>Enabled</label>
-                            <frontend_type>select</frontend_type>
-                            <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>1</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>0</show_in_store>
-                        </active>
-                        <title translate="label">
-                            <label>Title</label>
-                            <frontend_type>text</frontend_type>
-                            <sort_order>10</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                            <validate>required-entry</validate>
-                        </title>
-                        <sort_order translate="label">
-                            <label>Sort Order</label>
-                            <frontend_type>text</frontend_type>
-                            <sort_order>20</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                        </sort_order>
-                    </fields>
-                </ops_cod>
                 <ops_paypal translate="label">
-                    <label>Ingenico Payment Services Paypal</label>
+                    <label>PayEngine Paypal</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -1065,7 +1209,7 @@
                     </fields>
                 </ops_paypal>
                 <ops_eps translate="label">
-                    <label>Ingenico Payment Services Eps</label>
+                    <label>PayEngine Eps</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -1100,7 +1244,7 @@
                     </fields>
                 </ops_eps>
                 <ops_pingPing translate="label">
-                    <label>Ingenico Payment Services PingPing</label>
+                    <label>PayEngine PingPing</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -1135,7 +1279,7 @@
                     </fields>
                 </ops_pingPing>
                 <ops_fortisPayButton translate="label">
-                    <label>Ingenico Payment Services FortisPayButton</label>
+                    <label>PayEngine FortisPayButton</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -1170,7 +1314,7 @@
                     </fields>
                 </ops_fortisPayButton>
                 <ops_directEbanking translate="label">
-                    <label>Ingenico Payment Services DirectEbanking</label>
+                    <label>PayEngineSofortÜberweisung</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -1218,7 +1362,7 @@
                     </fields>
                 </ops_directEbanking>
                 <ops_cc translate="label">
-                    <label>Ingenico Payment Services Cc</label>
+                    <label>PayEngine Cc</label>
                     <sort_order>11</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -1259,8 +1403,9 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </types>
-                        <redirect_all translate="label">
+                        <redirect_all translate="label comment">
                             <label>Enable redirect payment for all card types</label>
+                            <comment><![CDATA[If set to <em>Yes></em>, customers will be redirected to the external PayEngine payment page.]]></comment>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
                             <sort_order>40</sort_order>
@@ -1268,8 +1413,9 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </redirect_all>
-                        <inline_types translate="label">
+                        <inline_types translate="label tooltip">
                             <label>Enable inline payment for these card types</label>
+                            <tooltip><![CDATA[For the selected card types, the customer can enter the credit card details directly in the checkout.]]></tooltip>
                             <frontend_type>multiselect</frontend_type>
                             <source_model>ops/source_cc_aliasInterfaceEnabledTypes</source_model>
                             <sort_order>41</sort_order>
@@ -1280,8 +1426,9 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </inline_types>
-                        <enabled_3dsecure translate="label">
+                        <enabled_3dsecure translate="label tooltip">
                             <label>Enable 3D secure</label>
+                            <tooltip><![CDATA[If the customer's credit card supports 3D Secure, he will be redirected to an external page to enter his password.]]></tooltip>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
                             <sort_order>50</sort_order>
@@ -1289,8 +1436,9 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>0</show_in_store>
                         </enabled_3dsecure>
-                        <backend_enabled>
+                        <backend_enabled translate="label tooltip">
                             <label>Enable for backend</label>
+                            <tooltip><![CDATA[This sets if this payment method should also be available for orders from the Magento backend.]]></tooltip>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
                             <sort_order>100</sort_order>
@@ -1298,27 +1446,16 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </backend_enabled>
-                        <active_alias translate="label">
+                        <active_alias translate="label comment">
                             <label>Enabled Alias Manager</label>
                             <frontend_type>select</frontend_type>
                             <source_model>adminhtml/system_config_source_yesno</source_model>
                             <sort_order>110</sort_order>
+                            <comment>If this option is enabled, the customer's alias data will be saved in the shop. The data can then be used again later if the buyer has stored them permanently on PayEngine side.</comment>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </active_alias>
-                        <show_alias_manager_info_for_guests translate="label">
-                            <label>Show Alias Manager information for guests</label>
-                            <frontend_type>select</frontend_type>
-                            <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>120</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                            <depends>
-                                <active_alias>1</active_alias>
-                            </depends>
-                        </show_alias_manager_info_for_guests>
                         <zero_amount_checkout>
                             <label>Allow zero amount authorization</label>
                             <comment>Only if payment action is authorize.</comment>
@@ -1332,7 +1469,7 @@
                     </fields>
                 </ops_cc>
                 <ops_ingHomePay translate="label">
-                    <label>Ingenico Payment Services IngHomePay</label>
+                    <label>PayEngine IngHomePay</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -1367,7 +1504,7 @@
                     </fields>
                 </ops_ingHomePay>
                 <ops_paysafecard translate="label">
-                    <label>Ingenico Payment Services Paysafecard</label>
+                    <label>PayEngine Paysafecard</label>
                     <sort_order>12</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -1402,7 +1539,7 @@
                     </fields>
                 </ops_paysafecard>
                 <ops_kwixoCredit translate="label">
-                    <label>Ingenico Payment Services KwixoCredit</label>
+                    <label>PayEngine KwixoCredit</label>
                     <sort_order>13</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -1507,7 +1644,7 @@
                     </fields>
                 </ops_kwixoCredit>
                 <ops_kwixoApresReception translate="label">
-                    <label>Ingenico Payment Services KwixoApresReception</label>
+                    <label>PayEngine KwixoApresReception</label>
                     <sort_order>13</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -1611,7 +1748,7 @@
                     </fields>
                 </ops_kwixoApresReception>
                 <ops_kwixoComptant translate="label">
-                    <label>Ingenico Payment Services KwixoComptant</label>
+                    <label>PayEngine KwixoComptant</label>
                     <sort_order>13</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -1716,7 +1853,7 @@
                     </fields>
                 </ops_kwixoComptant>
                 <ops_opsid translate="label">
-                    <label>Existing Ingenico Payment Services Transaction</label>
+                    <label>Existing PayEngine Transaction</label>
                     <sort_order>14</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>0</show_in_website>
@@ -1753,8 +1890,227 @@
                         </sort_order>
                     </fields>
                 </ops_opsid>
-
-
+                <ops_flex translate="label comment">
+                    <label>PayEngine Flex payment method</label>
+                    <sort_order>15</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <fields>
+                        <active translate="label">
+                            <label>Enabled</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>1</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </active>
+                        <title translate="label">
+                            <label>Title</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <validate>required-entry</validate>
+                            <depends>
+                                <active>1</active>
+                            </depends>
+                        </title>
+                        <sort_order translate="label">
+                            <label>Sort Order</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <depends>
+                                <active>1</active>
+                            </depends>
+                        </sort_order>
+                        <default translate="label tooltip">
+                            <label>Show empty default option</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>30</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <tooltip><![CDATA[A generic option, that lets the customer choose the exact method on PayEngine side.]]></tooltip>
+                            <depends>
+                                <active>1</active>
+                            </depends>
+                        </default>
+                        <default_title translate="label comment">
+                            <label>Default option title</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>31</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <validate>required-entry</validate>
+                            <tooltip>Title to display for the default option.</tooltip>
+                            <depends>
+                                <default>1</default>
+                            </depends>
+                        </default_title>
+                        <methods translate="label comment">
+                            <label>Methods</label>
+                            <frontend_model>ops/system_config_form_field_method</frontend_model>
+                            <backend_model>ops/system_config_backend_flex_methods</backend_model>
+                            <sort_order>40</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment>Add one or more methods. In field 'PM' you will have to enter the PM value you got from PayEngine, same goes for the field 'BRAND'.</comment>
+                            <depends>
+                                <active>1</active>
+                            </depends>
+                        </methods>
+                    </fields>
+                </ops_flex>
+                <ops_chinaUnionPay translate="label">
+                    <label>PayEngine ChinaUnionPay</label>
+                    <sort_order>15</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <fields>
+                        <active translate="label">
+                            <label>Enabled</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>1</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </active>
+                        <title translate="label,comment">
+                            <label>Title</label>
+                            <comment>This payment method always uses direct sale as payment action.</comment>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <validate>required-entry</validate>
+                        </title>
+                        <sort_order translate="label">
+                            <label>Sort Order</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </sort_order>
+                    </fields>
+                </ops_chinaUnionPay>
+                <ops_recurring_cc translate="label">
+                    <label>PayEngine Subscription Manager via Cc</label>
+                    <sort_order>11</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <fields>
+                        <active translate="label comment tooltip">
+                            <label>Enabled</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <frontend_model>ops/system_config_form_field_recurringActive</frontend_model>
+                            <comment><![CDATA[<p id='ops_recurring_cc_active_comment' style='colo:red; display:none;'>To use this functionality you have to have the Subscription manager function enabled in the PayEngine backend.</p>]]></comment>
+                            <tooltip><![CDATA[This payment method is used to handle subscriptions via PayEngine through Magentos recurring profiles. It is only available for orders containing only nominal items.]]></tooltip>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </active>
+                        <acceptedTypes translate="label">
+                            <label>Card Types</label>
+                            <frontend_type>multiselect</frontend_type>
+                            <sort_order>30</sort_order>
+                            <source_model>ops/source_cc_recurringTypes</source_model>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <depends>
+                                <active>1</active>
+                            </depends>
+                        </acceptedTypes>
+                        <enabled_3dsecure translate="label tooltip">
+                            <label>Enable 3D secure</label>
+                            <tooltip><![CDATA[If the customer's credit card supports 3D Secure, he will be redirected to an external page to enter his password.]]></tooltip>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>50</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <active>1</active>
+                            </depends>
+                        </enabled_3dsecure>
+                        <allowspecific translate="label">
+                            <label>Payment from Applicable Countries</label>
+                            <frontend_type>allowspecific</frontend_type>
+                            <sort_order>60</sort_order>
+                            <source_model>adminhtml/system_config_source_payment_allspecificcountries</source_model>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <active>1</active>
+                            </depends>
+                        </allowspecific>
+                        <specificcountry translate="label">
+                            <label>Payment from Specific Countries</label>
+                            <frontend_type>multiselect</frontend_type>
+                            <sort_order>61</sort_order>
+                            <source_model>adminhtml/system_config_source_country</source_model>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <can_be_empty>1</can_be_empty>
+                            <depends>
+                                <active>1</active>
+                            </depends>
+                        </specificcountry>
+                    </fields>
+                </ops_recurring_cc>
+                <ops_BCMC translate="label">
+                    <label>PayEngine BCMC</label>
+                    <sort_order>15</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <fields>
+                        <active translate="label">
+                            <label>Enabled</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </active>
+                        <title translate="label">
+                            <label>Title</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <validate>required-entry</validate>
+                        </title>
+                        <sort_order translate="label">
+                            <label>Sort Order</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </sort_order>
+                    </fields>
+                </ops_BCMC>
                 <!-- hide old ogone extension which is part of Magento EE due to a misunderstanding -->
                 <pbridge_ogone_direct>
                     <show_in_default>0</show_in_default>
@@ -1769,6 +2125,124 @@
                 <ccsave>
                     <sort_order>27</sort_order>
                 </ccsave>
+                <ops_dc translate="label">
+                    <label>PayEngine Dc</label>
+                    <sort_order>11</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <fields>
+                        <active translate="label">
+                            <label>Enabled</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </active>
+                        <title translate="label">
+                            <label>Title</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>11</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <validate>required-entry</validate>
+                        </title>
+                        <sort_order translate="label">
+                            <label>Sort Order</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </sort_order>
+                        <types translate="label">
+                            <label>Card Types</label>
+                            <frontend_type>multiselect</frontend_type>
+                            <sort_order>30</sort_order>
+                            <source_model>ops/source_debitCard_types</source_model>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </types>
+                        <redirect_all translate="label comment">
+                            <label>Enable redirect payment for all card types</label>
+                            <comment><![CDATA[If set to <em>Yes></em>, customers will be redirected to the external PayEngine payment page.]]></comment>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>40</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </redirect_all>
+                        <inline_types translate="label tooltip">
+                            <label>Enable inline payment for these card types</label>
+                            <tooltip><![CDATA[For the selected card types, the customer can enter the credit card details directly in the checkout.]]></tooltip>
+                            <frontend_type>multiselect</frontend_type>
+                            <source_model>ops/source_debitCard_aliasInterfaceEnabledTypes</source_model>
+                            <sort_order>41</sort_order>
+                            <depends>
+                                <redirect_all>0</redirect_all>
+                            </depends>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </inline_types>
+                        <enabled_3dsecure translate="label tooltip">
+                            <label>Enable 3D secure</label>
+                            <tooltip><![CDATA[If the customer's credit card supports 3D Secure, he will be redirected to an external page to enter his password.]]></tooltip>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>50</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </enabled_3dsecure>
+                        <backend_enabled translate="label tooltip">
+                            <label>Enable for backend</label>
+                            <tooltip><![CDATA[This sets if this payment method should also be available for orders from the Magento backend.]]></tooltip>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>100</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </backend_enabled>
+                        <active_alias translate="label">
+                            <label>Enabled Alias Manager</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>110</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </active_alias>
+                        <show_alias_manager_info_for_guests translate="label">
+                            <label>Show Alias Manager information for guests</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>120</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <depends>
+                                <active_alias>1</active_alias>
+                            </depends>
+                        </show_alias_manager_info_for_guests>
+                        <zero_amount_checkout>
+                            <label>Allow zero amount authorization</label>
+                            <comment>Only if payment action is authorize.</comment>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>130</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </zero_amount_checkout>
+                    </fields>
+                </ops_dc>
             </groups>
         </payment>
     </sections>

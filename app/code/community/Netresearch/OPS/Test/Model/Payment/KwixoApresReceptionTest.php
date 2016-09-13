@@ -11,6 +11,7 @@
  */
 class Netresearch_OPS_Test_Model_Payment_KwixoApresReceptionTest extends EcomDev_PHPUnit_Test_Case_Config
 {
+    /** @var  Netresearch_OPS_Model_Payment_KwixoApresReception */
     private $kwixoApresReceptionModel;
     
     private $store;
@@ -19,7 +20,9 @@ class Netresearch_OPS_Test_Model_Payment_KwixoApresReceptionTest extends EcomDev
     public function setUp()
     {
         parent::setup();
+        $payment = Mage::getModel('payment/info');
         $this->kwixoApresReceptionModel = Mage::getModel('ops/payment_kwixoApresReception');
+        $this->kwixoApresReceptionModel->setInfoInstance($payment);
         $this->store = Mage::app()->getStore(0)->load(0);
     }
 

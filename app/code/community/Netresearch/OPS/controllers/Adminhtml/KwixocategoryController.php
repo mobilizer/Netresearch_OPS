@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Netresearch_OPS_AdminController
  *
@@ -32,6 +33,7 @@ class Netresearch_OPS_Adminhtml_KwixocategoryController
                         $this->_redirect(
                             '*/*/', array('_current' => true, 'id' => null)
                         );
+
                         return false;
                     }
                 }
@@ -40,6 +42,7 @@ class Netresearch_OPS_Adminhtml_KwixocategoryController
 
         Mage::register('category', $category);
         Mage::register('current_category', $category);
+
         return $category;
     }
 
@@ -62,17 +65,17 @@ class Netresearch_OPS_Adminhtml_KwixocategoryController
         $this->getResponse()->setBody(
             Zend_Json::encode(
                 array(
-                     'data'       => $block->getTree(),
-                     'parameters' => array(
-                         'text'         => $block->buildNodeName($root),
-                         'draggable'    => false,
-                         'allowDrop'    => false,
-                         'id'           => (int)$root->getId(),
-                         'expanded'     => (int)$block->getIsWasExpanded(),
-                         'store_id'     => (int)$block->getStore()->getId(),
-                         'category_id'  => (int)$category->getId(),
-                         'root_visible' => (int)$root->getIsVisible()
-                     ))
+                    'data'       => $block->getTree(),
+                    'parameters' => array(
+                        'text'         => $block->buildNodeName($root),
+                        'draggable'    => false,
+                        'allowDrop'    => false,
+                        'id'           => (int)$root->getId(),
+                        'expanded'     => (int)$block->getIsWasExpanded(),
+                        'store_id'     => (int)$block->getStore()->getId(),
+                        'category_id'  => (int)$category->getId(),
+                        'root_visible' => (int)$root->getIsVisible()
+                    ))
             )
         );
     }
@@ -137,12 +140,13 @@ class Netresearch_OPS_Adminhtml_KwixocategoryController
         }
 
         $prevCategoryId = Mage::getSingleton('admin/session')
-            ->getLastEditedCategory(true);
+                              ->getLastEditedCategory(true);
         if ($prevCategoryId && !$this->getRequest()->getQuery('isAjax')) {
             $this->getRequest()->setParam('id', $prevCategoryId);
         }
         if ($redirect) {
             $this->_redirect('*/*/edit', $params);
+
             return;
         }
 
@@ -176,6 +180,7 @@ class Netresearch_OPS_Adminhtml_KwixocategoryController
                     'ops/adminhtml_kwixocategory_edit'
                 )->setController('kwixocategory')->toHtml()
             );
+
             return;
         }
         $this->_redirect('*/*/index', $params);
@@ -189,7 +194,9 @@ class Netresearch_OPS_Adminhtml_KwixocategoryController
         } catch (Exception $e) {
             Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
         }
-        $this->_redirect('*/*/index/', array('_current' => true, "id" => $post['category_id'], "store" => $post['storeId']));
+        $this->_redirect('*/*/index/',
+            array('_current' => true, "id" => $post['category_id'], "store" => $post['storeId'])
+        );
     }
 
     public function deleteAction()
@@ -208,5 +215,9 @@ class Netresearch_OPS_Adminhtml_KwixocategoryController
         $this->_redirect('*/*/index/', array("id" => $id, "store" => $storeId));
     }
 
+    protected function _isAllowed()
+    {
+        return Mage::getSingleton('admin/session')->isAllowed('catalog/categories');
+    }
 
 }

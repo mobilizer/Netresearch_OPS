@@ -1,16 +1,17 @@
 <?php
 /**
  * Netresearch_OPS_Model_Payment_OpenInvoiceNl
- * 
- * @package   
+ *
+ * @package
  * @copyright 2011 Netresearch
- * @author    Thomas Kappel <thomas.kappel@netresearch.de> 
+ * @author    Thomas Kappel <thomas.kappel@netresearch.de>
  * @license   OSL 3.0
  */
 class Netresearch_OPS_Model_Payment_OpenInvoiceNl
     extends Netresearch_OPS_Model_Payment_OpenInvoice_Abstract
 {
-    const CODE = 'Open Invoice NL';
+    protected $pm = 'Open Invoice NL';
+    protected $brand = 'Open Invoice NL';
 
     /** if we can capture directly from the backend */
     protected $_canBackendDirectCapture = false;
@@ -45,9 +46,9 @@ class Netresearch_OPS_Model_Payment_OpenInvoiceNl
     }
 
     /**
-     * get some method dependend form fields 
+     * get some method dependend form fields
      *
-     * @param Mage_Sales_Model_Quote $order 
+     * @param Mage_Sales_Model_Quote $order
      * @return array
      */
     public function getMethodDependendFormFields($order, $requestParams=null)
@@ -68,6 +69,7 @@ class Netresearch_OPS_Model_Payment_OpenInvoiceNl
             ->getOptionText($order->getCustomerGender());
 
         $formFields['CIVILITY']                         = $gender == 'Male' ? 'M' : 'V';
+        $formFields['ECOM_CONSUMER_GENDER']             = $gender == 'Male' ? 'M' : 'V';
         $formFields['OWNERADDRESS']                     = trim($splittedStreet[1]);
         $formFields['ECOM_BILLTO_POSTAL_STREET_NUMBER'] = trim($splittedStreet[2]);
         $formFields['OWNERZIP']                         = $billingAddress->getPostcode();
@@ -107,71 +109,12 @@ class Netresearch_OPS_Model_Payment_OpenInvoiceNl
             }
         }
 
-        // Order Details
-        $count = 1;
-        $subtotal = 0;
-        foreach ($order->getAllItems() as $item) {
-            if ($item->getParentItemId()
-                && $item->getParentItem()->getProductType() == Mage_Catalog_Model_Product_Type::TYPE_CONFIGURABLE
-                || $item->getProductType() == Mage_Catalog_Model_Product_Type::TYPE_BUNDLE) {
-                continue;
-            }
-            $subtotal += $item->getBasePriceInclTax() * $item->getQtyOrdered();
-            $count++;
-        }
-
-        /* add coupon item */
-        if ($order->getBaseDiscountAmount()) {
-            $couponAmount = $order->getBaseDiscountAmount();
-            $formFields['ITEMID' . $count]      = 'DISCOUNT';
-            $couponRuleName = 'DISCOUNT';
-            if ($order->getCouponRuleName() && strlen(trim($order->getCouponRuleName())) > 0) {
-                $couponRuleName = substr(trim($order->getCouponRuleName()), 0, 30);
-            }
-            $formFields['ITEMNAME' . $count]    = $couponRuleName;
-            $formFields['ITEMPRICE' . $count]   = number_format($couponAmount, 2, '.', '');
-            $formFields['ITEMQUANT' . $count]   = 1;
-            $formFields['ITEMVATCODE' . $count] = str_replace(',', '.',(string)(float)$this->getShippingTaxRate($order)) . '%';
-            $formFields['TAXINCLUDED' . $count] = 1;
-
-            $subtotal += $couponAmount;
-            $count++;
-        }
-
-        $shippingPrice = $order->getBaseShippingInclTax();
-        $subtotal += $shippingPrice;
-
-        /* modify shipping costs if there is a rounding error */
-        $roundingError = $order->getBaseGrandTotal() - $subtotal;
-        $shippingPrice += $roundingError;
-
-        /* add shipping item */
-        $formFields['ITEMID' . $count]      = 'SHIPPING';
-        $formFields['ITEMNAME' . $count]    = substr($order->getShippingDescription(), 0, 30);
-        $formFields['ITEMPRICE' . $count]   = number_format($shippingPrice, 2, '.', '');
-        $formFields['ITEMQUANT' . $count]   = 1;
-        $formFields['ITEMVATCODE' . $count] = str_replace(',', '.',(string)(float)$this->getShippingTaxRate($order)) . '%';
-        $formFields['TAXINCLUDED' . $count] = 1;
-        $count++;
-
-        return $formFields;
-    }
-
-    public function getItemFormFields($count, $item)
-    {
-        $formFields = parent::getItemFormFields($count, $item);
-
-        /* use price including tax */
-        $formFields['ITEMPRICE' . $count]   = number_format($item->getBasePriceInclTax(), 2, '.', '');
-        /* indicate that price already includes tax */
-        $formFields['TAXINCLUDED' . $count] = 1;
-
         return $formFields;
     }
 
     /**
      * get question for fields with disputable value
-     * users are asked to correct the values before redirect to Ingenico Payment Services
+     * users are asked to correct the values before redirect to PayEngine
      *
      * @param Mage_Sales_Model_Order $order         Current order
      * @param array                  $requestParams Request parameters
@@ -184,7 +127,7 @@ class Netresearch_OPS_Model_Payment_OpenInvoiceNl
 
     /**
      * get an array of fields with disputable value
-     * users are asked to correct the values before redirect to Ingenico Payment Services
+     * users are asked to correct the values before redirect to PayEngine
      *
      * @param Mage_Sales_Model_Order $order         Current order
      * @param array                  $requestParams Request parameters
@@ -199,4 +142,5 @@ class Netresearch_OPS_Model_Payment_OpenInvoiceNl
             'ECOM_SHIPTO_POSTAL_STREET_NUMBER',
         );
     }
+
 }

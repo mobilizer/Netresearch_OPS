@@ -22,8 +22,6 @@ class Netresearch_OPS_Model_Status_Update
 
     protected $opsResponse = array();
 
-    protected $transitionModel = null;
-
     protected $paymentHelper = null;
 
     protected $directLinkHelper = null;
@@ -41,7 +39,7 @@ class Netresearch_OPS_Model_Status_Update
     }
 
     /**
-     * @return null
+     * @return Netresearch_OPS_Helper_Data
      */
     public function getDataHelper()
     {
@@ -52,7 +50,7 @@ class Netresearch_OPS_Model_Status_Update
         return $this->dataHelper;
     }
     /**
-     * @param null $messageContainer
+     * @param Mage_Core_Model_Session_Abstract $messageContainer
      */
     public function setMessageContainer(Mage_Core_Model_Session_Abstract $messageContainer)
     {
@@ -186,9 +184,13 @@ class Netresearch_OPS_Model_Status_Update
         }
         $this->setOrder($order);
         $this->buildParams($order->getPayment());
-        $this->performRequest();
-        $this->updatePaymentStatus();
 
+        try {
+            $this->performRequest();
+            $this->updatePaymentStatus();
+        } catch (Mage_Core_Exception $e) {
+            $this->getMessageContainer()->addError($e->getMessage());
+        }
         return $this;
     }
 
@@ -208,6 +210,7 @@ class Netresearch_OPS_Model_Status_Update
         }
         $this->addPayIdSub($payment);
 
+
         return $this;
     }
 
@@ -226,6 +229,8 @@ class Netresearch_OPS_Model_Status_Update
         if (array_key_exists('AMOUNT', $this->opsResponse)) {
             $this->opsResponse['amount'] = $this->opsResponse['AMOUNT'];
         }
+
+
         return $this;
     }
 
@@ -234,35 +239,23 @@ class Netresearch_OPS_Model_Status_Update
         if (!array_key_exists('STATUS', $this->getOpsResponse())
             || $this->opsResponse['STATUS'] == $this->getOrder()->getPayment()->getAdditionalInformation('status')
         ) {
-            return $this;
+            $this->getMessageContainer()->addNotice($this->getDataHelper()->__('No update available from PayEngine.'));
+           return $this;
         }
 
-        $this->getPaymentHelper()->saveOpsStatusToPayment($this->getOrder()->getPayment(), $this->getOpsResponse());
-
-        if (0 < strlen(trim($this->getOrder()->getPayment()->getAdditionalInformation('paymentId')))) {
-            $this->getTransitionModel()->processOpsResponse($this->getOpsResponse(), $this->getOrder());
-
+        if (false != strlen(trim($this->getOrder()->getPayment()->getAdditionalInformation('paymentId')))) {
+            Mage::getModel('ops/response_handler')->processResponse($this->getOpsResponse(),
+                $this->getOrder()->getPayment()->getMethodInstance()
+            );
         } else {
             // simulate initial request
             $this->getPaymentHelper()->applyStateForOrder($this->getOrder(), $this->getOpsResponse());
         }
-        $this->getMessageContainer()->addSuccess($this->getDataHelper()->__('Ingenico Payment Services status successfully updated'));
+
+        $this->getPaymentHelper()->saveOpsStatusToPayment($this->getOrder()->getPayment(), $this->getOpsResponse());
+        $this->getMessageContainer()->addSuccess($this->getDataHelper()->__('PayEngine status successfully updated'));
 
         return $this;
-    }
-
-    public function getTransitionModel()
-    {
-        if (null == $this->transitionModel) {
-            $this->transitionModel = Mage::getModel('ops/status_transition');
-        }
-
-        return $this->transitionModel;
-    }
-
-    public function setTransitionModel(Netresearch_OPS_Model_Status_Transition $transitionModel)
-    {
-        $this->transitionModel = $transitionModel;
     }
 
     public function getPaymentHelper()
@@ -298,31 +291,12 @@ class Netresearch_OPS_Model_Status_Update
      */
     protected function addPayIdSub(Mage_Sales_Model_Order_Payment $payment)
     {
-        $txType = null;
-        if ($payment->getAdditionalInformation('status')
-            == Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSING
-        ) {
-            $txType = Netresearch_OPS_Model_Payment_Abstract::OPS_CAPTURE_TRANSACTION_TYPE;
+        $lastTransaction = $payment->getLastTransId();
+        $lastTransactionParts = explode('/', $lastTransaction);
+        if($lastTransaction && count($lastTransactionParts)>1){
+            $this->requestParams['PAYIDSUB'] = $lastTransactionParts[1];
         }
-        if ($payment->getAdditionalInformation('status') == Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_WAITING
-        ) {
-            $txType = Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_TRANSACTION_TYPE;
-        }
-        if (null !== $txType) {
-            $transaction = $this->getDirectLinkHelper()->getPaymentTransaction(
-                $this->getOrder(),
-                $this->requestParams['PAYID'],
-                $txType
-            );
-            if (0 < $transaction->getTxnId()) {
-                $historyLevel = str_replace(
-                    $transaction->getParentTxnId() . '/',
-                    '',
-                    $transaction->getTxnId()
-                );
-                $this->requestParams['PAYIDSUB'] = $historyLevel;
-            }
-        }
+        return $this;
     }
 
     protected function canNotUseOrderId(Mage_Sales_Model_Order_Payment $payment)

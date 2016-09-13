@@ -40,7 +40,7 @@ ops_CreditCard:
 ops_CreditCard:
     pm:    CreditCard
     brand:  VISA
-ops_CreditCard:
+ops_BCMC:
     pm:    CreditCard
     brand:  BCMC
 ops_CreditCard:
@@ -163,6 +163,9 @@ ops_fortisPayButton:
 ops_giroPay:
     pm:    giropay
     brand: giropay
+ops_Masterpass:
+    pm:    Masterpass
+    brand: Masterpass
 ops_iDeal:
     pm:    iDEAL
     brand: iDEAL
@@ -235,6 +238,9 @@ ops_openInvoiceFi:
 ops_openInvoiceNl:
     pm:    Open Invoice NL
     brand: Open Invoice NL
+ops_openInvoiceAT:
+    pm:    Open Invoice AT
+    brand: Open Invoice AT
 ops_openInvoiceNo:
     pm:    Open Invoice NO
     brand: Open Invoice NO

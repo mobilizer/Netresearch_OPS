@@ -1,12 +1,18 @@
 <?php
 /**
- * @author      Michael Lühr <michael.luehr@netresearch.de> 
+ * @author      Michael Lühr <michael.luehr@netresearch.de>
  * @category    Netresearch
  * @copyright   Copyright (c) 2014 Netresearch GmbH & Co. KG (http://www.netresearch.de)
  * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class Netresearch_OPS_Test_Model_Status_UpdateTest extends EcomDev_PHPUnit_Test_Case
 {
+
+    protected function mockSessions(){
+        $sessionMock = $this->getModelMock('admin/session', array());
+        $sessionMock->disableOriginalConstructor();
+        $this->replaceByMock('singleton', 'admin/session', $sessionMock);
+    }
 
     public function testNoUpdateForNonOpsPayments()
     {
@@ -109,15 +115,8 @@ class Netresearch_OPS_Test_Model_Status_UpdateTest extends EcomDev_PHPUnit_Test_
         $payment->setMethod('ops_directDebit');
         $payment->setAdditionalInformation('paymentId', 4711);
         $payment->setAdditionalInformation('status', 91);
+        $payment->setLastTransId('4711/1');
         $order->setPayment($payment);
-
-        $fakeTransaction = new Varien_Object();
-        $fakeTransaction->setTxnId(1);
-
-        $directLinkHelperMock = $this->getHelperMock('ops/directlink', array('getPaymentTransaction'));
-        $directLinkHelperMock->expects($this->once())
-            ->method('getPaymentTransaction')
-            ->will($this->returnValue($fakeTransaction));
 
         $statusUpdateApiMock = $this->getModelMock('ops/status_update', array('updatePaymentStatus'));
         $directLinkApiMock = $this->getModelMock('ops/api_directlink', array('performRequest'));
@@ -132,7 +131,6 @@ class Netresearch_OPS_Test_Model_Status_UpdateTest extends EcomDev_PHPUnit_Test_
             )
             ->will($this->returnValue(array('STATUS' => 5)))
         ;
-        $statusUpdateApiMock->setDirectLinkHelper($directLinkHelperMock);
         $statusUpdateApiMock->setDirectLinkApi($directLinkApiMock);
         $statusUpdateApiMock->updateStatusFor($order);
         $opsResponse = $statusUpdateApiMock->getOpsResponse();
@@ -147,15 +145,8 @@ class Netresearch_OPS_Test_Model_Status_UpdateTest extends EcomDev_PHPUnit_Test_
         $payment->setMethod('ops_directDebit');
         $payment->setAdditionalInformation('paymentId', 4711);
         $payment->setAdditionalInformation('status', 81);
+        $payment->setLastTransId('4711/1');
         $order->setPayment($payment);
-
-        $fakeTransaction = new Varien_Object();
-        $fakeTransaction->setTxnId(1);
-
-        $directLinkHelperMock = $this->getHelperMock('ops/directlink', array('getPaymentTransaction'));
-        $directLinkHelperMock->expects($this->once())
-            ->method('getPaymentTransaction')
-            ->will($this->returnValue($fakeTransaction));
 
         $statusUpdateApiMock = $this->getModelMock('ops/status_update', array('updatePaymentStatus'));
         $directLinkApiMock = $this->getModelMock('ops/api_directlink', array('performRequest'));
@@ -171,7 +162,6 @@ class Netresearch_OPS_Test_Model_Status_UpdateTest extends EcomDev_PHPUnit_Test_
             ->will($this->returnValue(array('STATUS' => 8, 'AMOUNT' => 1,)))
         ;
 
-        $statusUpdateApiMock->setDirectLinkHelper($directLinkHelperMock);
         $statusUpdateApiMock->setDirectLinkApi($directLinkApiMock);
         $statusUpdateApiMock->updateStatusFor($order);
         $opsResponse = $statusUpdateApiMock->getOpsResponse();
@@ -189,7 +179,7 @@ class Netresearch_OPS_Test_Model_Status_UpdateTest extends EcomDev_PHPUnit_Test_
         $payment = Mage::getModel('sales/order_payment');
         $payment->setMethod('ops_directDebit');
         $payment->setAdditionalInformation('paymentId', 4711);
-        $payment->setAdditionalInformation('status', 8);
+        $payment->setAdditionalInformation('status', Netresearch_OPS_Model_Status::REFUNDED);
         $order->setPayment($payment);
 
         $paymentHelperMock = $this->getHelperMock('ops/payment', array('saveOpsStatusToPayment'));
@@ -198,9 +188,17 @@ class Netresearch_OPS_Test_Model_Status_UpdateTest extends EcomDev_PHPUnit_Test_
             ->will($this->returnValue('foo'));
         ;
 
+        // no email on refund response type
+        $dataHelperMock = $this->getHelperMock('ops/data', ['sendTransactionalEmail']);
+        $dataHelperMock
+            ->expects($this->never())
+            ->method('sendTransactionalEmail')
+            ->with($this->isInstanceOf('Mage_Sales_Model_Order'))
+        ;
+        $this->replaceByMock('helper', 'ops/data', $dataHelperMock);
 
 
-        $statusUpdateApiMock = Mage::getModel('ops/status_update');
+        $statusUpdateApi = Mage::getModel('ops/status_update');
         $directLinkApiMock = $this->getModelMock('ops/api_directlink', array('performRequest'));
         $directLinkApiMock->expects($this->once())
             ->method('performRequest')
@@ -210,21 +208,23 @@ class Netresearch_OPS_Test_Model_Status_UpdateTest extends EcomDev_PHPUnit_Test_
                 Mage::getModel('ops/config')->getDirectLinkMaintenanceApiPath($order->getStoreId()),
                 $order->getStoreId()
             )
-            ->will($this->returnValue(array('STATUS' => 8,)))
+            ->will($this->returnValue(array('STATUS' => Netresearch_OPS_Model_Status::REFUNDED,)))
         ;
-        $statusUpdateApiMock->setPaymentHelper($paymentHelperMock);
-        $statusUpdateApiMock->setDirectLinkApi($directLinkApiMock);
-        $statusUpdateApiMock->updateStatusFor($order);
-        $opsResponse = $statusUpdateApiMock->getOpsResponse();
-        $this->assertArrayHasKey('STATUS', $opsResponse);
-        $this->assertEquals(8, $opsResponse['STATUS']);
 
+        $adminSessionMock = $this->getModelMock('adminhtml/session', array('init', 'save', 'addNotice'));
+        $statusUpdateApi->setMessageContainer($adminSessionMock);
+        $statusUpdateApi->setPaymentHelper($paymentHelperMock);
+        $statusUpdateApi->setDirectLinkApi($directLinkApiMock);
+        $statusUpdateApi->updateStatusFor($order);
+        $opsResponse = $statusUpdateApi->getOpsResponse();
+        $this->assertArrayHasKey('STATUS', $opsResponse);
+        $this->assertEquals(Netresearch_OPS_Model_Status::REFUNDED, $opsResponse['STATUS']);
     }
 
     public function testUpdatePaymentStatusWithStatusChange()
     {
         $order = Mage::getModel('sales/order');
-        $payment = Mage::getModel('sales/order_payment');
+        $payment = $this->getModelMock('sales/order_payment', array('save'));
         $payment->setMethod('ops_directDebit');
         $payment->setAdditionalInformation('paymentId', 4711);
         $payment->setAdditionalInformation('status', 5);
@@ -236,10 +236,18 @@ class Netresearch_OPS_Test_Model_Status_UpdateTest extends EcomDev_PHPUnit_Test_
             ->with($payment, $response)
         ;
 
+        $dataHelperMock = $this->getHelperMock('ops/data', ['sendTransactionalEmail']);
+        $dataHelperMock
+            ->expects($this->once())
+            ->method('sendTransactionalEmail')
+            ->with($this->isInstanceOf('Mage_Sales_Model_Order'))
+        ;
+        $this->replaceByMock('helper', 'ops/data', $dataHelperMock);
+
         $adminSessionMock = $this->getModelMock('adminhtml/session', array('init', 'save', 'addSuccess'));
 
-        $statusUpdateApiMock = Mage::getModel('ops/status_update');
-        $statusUpdateApiMock->setMessageContainer($adminSessionMock);
+        $statusUpdateApi = Mage::getModel('ops/status_update');
+        $statusUpdateApi->setMessageContainer($adminSessionMock);
         $directLinkApiMock = $this->getModelMock('ops/api_directlink', array('performRequest'));
         $directLinkApiMock->expects($this->once())
             ->method('performRequest')
@@ -252,18 +260,11 @@ class Netresearch_OPS_Test_Model_Status_UpdateTest extends EcomDev_PHPUnit_Test_
             ->will($this->returnValue($response))
         ;
 
-        $transitionModelMock = $this->getModelMock('ops/status_transition', array('processOpsResponse'));
-        $transitionModelMock->expects($this->once())
-            ->method('processOpsResponse')
-            ->with($response, $order)
-        ;
+        $statusUpdateApi->setPaymentHelper($paymentHelperMock);
+        $statusUpdateApi->setDirectLinkApi($directLinkApiMock);
 
-        $statusUpdateApiMock->setTransitionModel($transitionModelMock);
-        $statusUpdateApiMock->setPaymentHelper($paymentHelperMock);
-        $statusUpdateApiMock->setDirectLinkApi($directLinkApiMock);
-
-        $statusUpdateApiMock->updateStatusFor($order);
-        $opsResponse = $statusUpdateApiMock->getOpsResponse();
+        $statusUpdateApi->updateStatusFor($order);
+        $opsResponse = $statusUpdateApi->getOpsResponse();
         $this->assertArrayHasKey('STATUS', $opsResponse);
         $this->assertEquals(91, $opsResponse['STATUS']);
 
@@ -311,4 +312,4 @@ class Netresearch_OPS_Test_Model_Status_UpdateTest extends EcomDev_PHPUnit_Test_
         $this->assertEquals(91, $opsResponse['STATUS']);
 
     }
-} 
+}

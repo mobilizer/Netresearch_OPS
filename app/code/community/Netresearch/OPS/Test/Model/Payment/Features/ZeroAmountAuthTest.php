@@ -36,10 +36,13 @@ class Netresearch_OPS_Test_Model_Payment_Features_ZeroAmountAuthTest extends Eco
     public function testIsCCAndZeroAmountAuthAllowedTrue()
     {
         $ccModelMock = $this->getCCMock(true);
-        $quote       = $this->getModelMock('sales/quote', array('getItemsCount'));
+        $quote       = $this->getModelMock('sales/quote', array('getItemsCount', 'isNominal'));
         $quote->expects($this->once())
             ->method('getItemsCount')
             ->will($this->returnValue(1));
+        $quote->expects($this->once())
+            ->method('isNominal')
+            ->will($this->returnValue(false));
         $this->assertTrue($this->featureModel->isCCAndZeroAmountAuthAllowed($ccModelMock, $quote));
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Magento
  *
@@ -23,7 +24,6 @@
  * @copyright   Copyright (c) 2009 Irubin Consulting Inc. DBA Varien (http://www.varien.com)
  * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
-
 class Netresearch_OPS_Block_Frauddetection
     extends Mage_Core_Block_Template
 {
@@ -33,24 +33,24 @@ class Netresearch_OPS_Block_Frauddetection
 
     /**
      * renders the additional fraud detection js
+     *
      * @return string
      */
     protected function _toHtml()
     {
         $html = null;
         $storeId = Mage::helper('core/data')->getStoreId();
-        if (true === Mage::getModel('ops/config')->isTrackingCodeActivated(
-            $storeId
-        )
-        ) {
+        if (true == Mage::getModel('ops/config')->getDeviceFingerPrinting($storeId)
+        && Mage::getSingleton('customer/session')->getData(Netresearch_OPS_Model_Payment_Abstract::FINGERPRINT_CONSENT_SESSION_KEY)) {
             $html = parent::_toHtml();
         }
+
         return $html;
     }
 
     /**
      * get the tracking code application id from config
-     * 
+     *
      * @return string
      */
     public function getTrackingCodeAid()
@@ -61,12 +61,14 @@ class Netresearch_OPS_Block_Frauddetection
 
     /**
      * build md5 hash from customer session ID
-     * 
+     *
      * @return string
      */
     public function getTrackingSid()
     {
-        return md5(Mage::getSingleton("customer/session")->getSessionId());
+        $quote = Mage::getSingleton('checkout/type_onepage')->getQuote();
+
+        return md5(Mage::getModel('ops/config')->getPSPID($quote->getStoreId()) . Mage::helper('ops/order')->getOpsOrderId($quote));
     }
 
 }

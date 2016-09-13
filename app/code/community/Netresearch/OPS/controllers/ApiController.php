@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Netresearch_OPS_ApiController
  *
@@ -22,7 +23,10 @@ class Netresearch_OPS_ApiController extends Netresearch_OPS_Controller_Abstract
     {
         parent::preDispatch();
         if (!$this->_validateOPSData()) {
-            throw new Exception ("Hash not valid");
+            $this->getResponse()->setHttpResponseCode(422);
+            $this->setFlag('', self::FLAG_NO_DISPATCH, 1);
+
+            return;
         }
     }
 
@@ -33,18 +37,7 @@ class Netresearch_OPS_ApiController extends Netresearch_OPS_Controller_Abstract
     public function postBackAction()
     {
         $params = $this->getRequest()->getParams();
-        if (Mage::app()->getStore()->getId() != $this->_getOrder()->getStoreId()) {
-            $redirectRoute = Mage::getUrl(
-                'ops/api/postBack',
-                array(
-                    '_store' => $this->_getOrder()->getStoreId(),
-                    '_nosid' => true,
-                    '_query' => $params
-                 )
-            );
-        $this->_redirectUrl($redirectRoute);
-        return;
-        }
+
         try {
             $status = $this->getPaymentHelper()->applyStateForOrder(
                 $this->_getOrder(),
@@ -52,7 +45,14 @@ class Netresearch_OPS_ApiController extends Netresearch_OPS_Controller_Abstract
             );
             $redirectRoute = Mage::helper('ops/api')
                 ->getRedirectRouteFromStatus($status);
-            $this->_redirect($redirectRoute, array('_query' => $params));
+
+            $this->_redirect(
+                $redirectRoute, array(
+                    '_store' => $this->_getOrder()->getStoreId(),
+                    '_query' => $params,
+                    '_nosid' => true
+                )
+            );
         } catch (Exception $e) {
             Mage::helper('ops')->log(
                 "Run into exception '{$e->getMessage()}' in postBackAction"
@@ -67,17 +67,28 @@ class Netresearch_OPS_ApiController extends Netresearch_OPS_Controller_Abstract
      */
     public function directLinkPostBackAction()
     {
+
         $params = $this->getRequest()->getParams();
+        Mage::log(
+            "Incoming Request on Directlink: " . serialize($params),
+            null,
+            'incoming.log',
+            true
+        );
         try {
-            $this->getDirectlinkHelper()->processFeedback(
-                $this->_getOrder(),
-                $params
-            );
+            if (Mage::helper('ops/subscription')->isSubscriptionFeedback($params)) {
+                $this->getSubscriptionManager()->processSubscriptionFeedback($params);
+            } else {
+                $this->getDirectlinkHelper()->processFeedback(
+                    $this->_getOrder(),
+                    $params
+                );
+            }
         } catch (Exception $e) {
             Mage::helper('ops')->log(
                 "Run into exception '{$e->getMessage()}' in directLinkPostBackAction"
             );
-            throw ($e);
+            $this->getResponse()->setHttpResponseCode(500);
         }
     }
 }

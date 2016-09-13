@@ -98,14 +98,8 @@ abstract class Netresearch_OPS_Model_Backend_Operation_Parameter_Additional_Open
     {
         $taxRate       = 0.0;
         $order         = $invoice->getOrder();
-        $payment       = $order->getPayment();
-        $paymentMethod = null;
-        if ($payment) {
-            $paymentMethod = $payment->getMethodInstance();
-        }
-        if ($paymentMethod instanceof Netresearch_OPS_Model_Payment_Abstract) {
-            $taxRate = (floatval($paymentMethod->getShippingTaxRate($order)));
-        }
+
+        $taxRate = (floatval(Mage::helper('ops/payment_request')->getShippingTaxRate($order)));
 
         return $taxRate;
     }
@@ -141,7 +135,6 @@ abstract class Netresearch_OPS_Model_Backend_Operation_Parameter_Additional_Open
             $this->additionalParams['ITEMID' . $this->itemIdx]    = 'DISCOUNT';
             $this->additionalParams['ITEMNAME' . $this->itemIdx]  = $couponRuleName;
             $this->additionalParams['ITEMPRICE' . $this->itemIdx] = $this->getOpsDataHelper()->getAmount($amount);
-            $this->amount += $this->getOpsDataHelper()->getAmount($amount);
             $this->additionalParams['ITEMQUANT' . $this->itemIdx]   = 1;
             $this->additionalParams['ITEMVATCODE' . $this->itemIdx] = $this->getShippingTaxRate($invoice) . '%';
             $this->additionalParams['TAXINCLUDED' . $this->itemIdx] = 1;

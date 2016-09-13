@@ -27,10 +27,9 @@ class Netresearch_OPS_Model_Backend_Operation_Parameter
         $operation,
         Netresearch_OPS_Model_Payment_Abstract $opsPaymentMethod,
         Varien_Object $payment,
-        $amount,
-        $arrInfo
+        $amount
     ) {
-        return $this->getParameterModel($operation)->getRequestParams($opsPaymentMethod, $payment, $amount, $arrInfo);
+        return $this->getParameterModel($operation)->getRequestParams($opsPaymentMethod, $payment, $amount);
     }
 
     /**

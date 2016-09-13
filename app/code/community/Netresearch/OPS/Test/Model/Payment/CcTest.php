@@ -37,6 +37,7 @@ class Netresearch_OPS_Test_Model_Payment_CcTest extends EcomDev_PHPUnit_Test_Cas
 
     public function testOrderPlaceRedirectUrl()
     {
+        $this->_model->setInfoInstance($this->_payment);
         $this->_payment->setAdditionalInformation('CC_BRAND', 'VISA');
         $this->assertFalse($this->_model->getOrderPlaceRedirectUrl($this->_payment), 'VISA should NOT require a redirect after checkout');
         
@@ -123,13 +124,16 @@ class Netresearch_OPS_Test_Model_Payment_CcTest extends EcomDev_PHPUnit_Test_Cas
                 ->will($this->returnValue(true));
             $this->replaceByMock('helper', 'ops/version', $helperMock);
 
-            $quote       = $this->getModelMock('sales/quote', array('getItemsCount', 'getBaseGrandTotal'));
+            $quote       = $this->getModelMock('sales/quote', array('getItemsCount', 'getBaseGrandTotal', 'isNominal'));
             $quote->expects($this->once())
                 ->method('getItemsCount')
                 ->will($this->returnValue(1));
             $quote->expects($this->any())
                 ->method('getBaseGrandTotal')
                 ->will($this->returnValue(0.0));
+            $quote->expects($this->any())
+                ->method('isNominal')
+                ->will($this->returnValue(false));
             $this->assertTrue($this->_model->isApplicableToQuote($quote, 128));
         }
     }
@@ -190,6 +194,20 @@ class Netresearch_OPS_Test_Model_Payment_CcTest extends EcomDev_PHPUnit_Test_Cas
         $this->replaceByMock('singleton', 'checkout/session', $checkoutSessionMock);
         $this->assertEquals('VISA', $this->_model->getOpsBrand(null));
 
+    }
+
+    public function testIsAvailable()
+    {
+        $helperMock = $this->getHelperMock('ops/data', array('isAdminSession'));
+        $helperMock->expects($this->once())
+            ->method('isAdminSession')
+            ->will($this->returnValue(false));
+        $this->replaceByMock('helper', 'ops/data', $helperMock);
+        $quote = Mage::getModel('sales/quote');
+        $quote->setItemsCount(0);
+        $this->assertFalse($this->_model->isAvailable($quote));
+        $quote->setItemsCount(500);
+        $this->assertFalse($this->_model->isAvailable($quote));
     }
 }
 

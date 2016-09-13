@@ -53,7 +53,7 @@ if (0 < count($shippingMethods)):
                         ): ?>
                             <option
                                 value="<?php echo $kwixoShippingType['value']; ?>"
-                                <?php if ($kwixoShippingType['value'] == $values['kwixo_shipping_type']): ?>
+                                <?php if (array_key_exists('kwixo_shipping_type', $values) && $kwixoShippingType['value'] == $values['kwixo_shipping_type']): ?>
                                     selected="selected"
                                 <?php endif; ?>
                                 >
@@ -70,7 +70,7 @@ if (0 < count($shippingMethods)):
                 <td>
                     <input type="text" class="input-text"
                            name="<?php echo $code; ?>[kwixo_shipping_speed]"
-                           value="<?php echo $values['kwixo_shipping_speed']; ?>"
+                           value="<?php echo  array_key_exists('kwixo_shipping_speed', $values)? $values['kwixo_shipping_speed'] : ''; ?>"
                         />
                     <?php if (array_key_exists('kwixo_shipping_speed_error', $values)): ?>
                         <div class="error">
@@ -81,7 +81,7 @@ if (0 < count($shippingMethods)):
                 <td>
                     <input type="text" class="input-text"
                            name="<?php echo $code; ?>[kwixo_shipping_details]"
-                           value="<?php echo $values['kwixo_shipping_details']; ?>"
+                           value="<?php echo array_key_exists('kwixo_shipping_details', $values)? $values['kwixo_shipping_details'] : '';; ?>"
                         />
                     <?php if (array_key_exists('kwixo_shipping_details_error', $values)): ?>
                         <div class="error">

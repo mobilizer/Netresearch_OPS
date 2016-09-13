@@ -1,6 +1,6 @@
 <?php
 class Netresearch_OPS_Test_Helper_PaymentTest
-    extends EcomDev_PHPUnit_Test_Case
+    extends Netresearch_OPS_Test_Model_Response_TestCase
 {
     private $_helper;
     private $store;
@@ -17,22 +17,22 @@ class Netresearch_OPS_Test_Helper_PaymentTest
     {
         $this->assertTrue(
             $this->_helper->isPaymentAuthorizeType(
-                Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED
+                Netresearch_OPS_Model_Status::AUTHORIZED
             )
         );
         $this->assertTrue(
             $this->_helper->isPaymentAuthorizeType(
-                Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED_WAITING
+                Netresearch_OPS_Model_Status::AUTHORIZATION_WAITING
             )
         );
         $this->assertTrue(
             $this->_helper->isPaymentAuthorizeType(
-                Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED_UNKNOWN
+                Netresearch_OPS_Model_Status::AUTHORIZED_UNKNOWN
             )
         );
         $this->assertTrue(
             $this->_helper->isPaymentAuthorizeType(
-                Netresearch_OPS_Model_Payment_Abstract::OPS_AWAIT_CUSTOMER_PAYMENT
+                Netresearch_OPS_Model_Status::WAITING_CLIENT_PAYMENT
             )
         );
         $this->assertFalse($this->_helper->isPaymentAuthorizeType(0));
@@ -42,17 +42,17 @@ class Netresearch_OPS_Test_Helper_PaymentTest
     {
         $this->assertTrue(
             $this->_helper->isPaymentCaptureType(
-                Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REQUESTED
+                Netresearch_OPS_Model_Status::PAYMENT_REQUESTED
             )
         );
         $this->assertTrue(
             $this->_helper->isPaymentCaptureType(
-                Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSING
+                Netresearch_OPS_Model_Status::PAYMENT_PROCESSING
             )
         );
         $this->assertTrue(
             $this->_helper->isPaymentCaptureType(
-                Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_UNCERTAIN
+                Netresearch_OPS_Model_Status::PAYMENT_UNCERTAIN
             )
         );
         $this->assertFalse($this->_helper->isPaymentCaptureType(0));
@@ -381,129 +381,106 @@ class Netresearch_OPS_Test_Helper_PaymentTest
 
 
     /**
-     * @loadFixture ../../../var/fixtures/orders.yaml
+     * @param int $opsStatus Incoming postBack status
+     * @param bool $sendMail Indicates whether opsStatus should trigger order confirmation mail
+     * @param string $feedbackStatus Indicates the route that the customer should get redirected to
      *
+     * @loadFixture ../../../var/fixtures/orders.yaml
+     * @dataProvider applyStateForOrderProvider
      */
-    public function testApplyStateForOrder()
+    public function testApplyStateForOrder($opsStatus, $sendMail, $feedbackStatus)
     {
+        $this->mockEmailHelper($this->exactly(intval($sendMail)));
+        $this->mockOrderConfig();
+
+        $helperMock = $this->getHelperMock('ops', array('isAdminSession'));
+        $helperMock->expects($this->any())
+            ->method('isAdminSession')
+            ->will($this->returnValue(false));
+        $this->replaceByMock('helper', 'ops', $helperMock);
+
+        /** @var Netresearch_OPS_Helper_Payment $paymenthelperMock */
+        $paymenthelperMock = $this->getHelperMock('ops/payment', [
+            'acceptOrder', 'waitOrder', 'declineOrder', 'cancelOrder', 'handleException',
+        ]);
+
         $order = Mage::getModel('sales/order')->load(19);
-        $paymenthelperMock = $this->getHelperMock(
-            'ops/payment', array(
-                                'acceptOrder',
-                                'waitOrder',
-                                'declineOrder',
-                                'cancelOrder',
-                                'handleException'
-                           )
+        $this->assertEquals(
+            $feedbackStatus,
+            $paymenthelperMock->applyStateForOrder($order, ['STATUS' => $opsStatus])
         );
+    }
 
-        // assertion for OPS_OPEN_INVOICE_DE_PROCESSED = 41000001
-        $this->assertEquals(
-            'accept', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_AWAIT_CUSTOMER_PAYMENT)
-            )
-        );
-
-        // assertion for OPS_WAITING_FOR_IDENTIFICATION  = 46
-        $this->assertEquals(
-            'accept', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_WAITING_FOR_IDENTIFICATION)
-            )
-        );
-
-        // assertion for OPS_AUTHORIZED  = 5
-        $this->assertEquals(
-            'accept', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED)
-            )
-        );
-        // assertion for OPS_AUTHORIZED_KWIXO  = 50
-        $this->assertEquals(
-            'accept', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED_KWIXO)
-            )
-        );
-
-        // assertion for OPS_AUTHORIZED_WAITING = 51
-        $this->assertEquals(
-            'accept', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED_WAITING)
-            )
-        );
-
-        // assertion for OPS_AUTHORIZED_UNKNOWN  = 52
-        $this->assertEquals(
-            'accept', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED_UNKNOWN)
-            )
-        );
-
-        // assertion for OPS_AWAIT_CUSTOMER_PAYMENT = 41
-        $this->assertEquals(
-            'accept', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_AWAIT_CUSTOMER_PAYMENT)
-            )
-        );
-
-        // assertion for OPS_PAYMENT_REQUESTED = 9
-        $this->assertEquals(
-            'accept', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REQUESTED)
-            )
-        );
-        // assertion for OPS_PAYMENT_PROCESSING = 91
-        $this->assertEquals(
-            'accept', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSING)
-            )
-        );
-        // assertion for OPS_OPEN_INVOICE_DE_PROCESSED  = 41000001
-        $this->assertEquals(
-            'accept', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_OPEN_INVOICE_DE_PROCESSED)
-            )
-        );
-        // assertion for OPS_AUTH_REFUSED   = 2
-        $this->assertEquals(
-            'decline', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_AUTH_REFUSED)
-            )
-        );
-        // assertion for OPS_PAYMENT_REFUSED = 93
-        $this->assertEquals(
-            'decline', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REFUSED)
-            )
-        );
-        // assertion for OPS_PAYMENT_CANCELED_BY_CUSTOMER        = 1
-        $this->assertEquals(
-            'cancel', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array(
-                     'STATUS' => Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_CANCELED_BY_CUSTOMER,
-                     'PAYID'  => 4711
-                )
-            )
-        );
-        // assertion for exception case
-        $this->assertEquals(
-            'exception', $paymenthelperMock->applyStateForOrder(
-                $order,
-                array('STATUS' => 'default')
-            )
-        );
+    public function applyStateForOrderProvider()
+    {
+        return [
+            // assertion for WAITING_FOR_IDENTIFICATION = 46
+            [
+                $opsStatus      = Netresearch_OPS_Model_Status::WAITING_FOR_IDENTIFICATION,
+                $sendMail       = false,
+                $feedbackStatus = Netresearch_OPS_Model_Status_Feedback::OPS_ORDER_FEEDBACK_STATUS_ACCEPT,
+            ],
+            // assertion for AUTHORIZED = 5
+            [
+                $opsStatus      = Netresearch_OPS_Model_Status::AUTHORIZED,
+                $sendMail       = true,
+                $feedbackStatus = Netresearch_OPS_Model_Status_Feedback::OPS_ORDER_FEEDBACK_STATUS_ACCEPT,
+            ],
+            // assertion for AUTHORIZED_WAITING_EXTERNAL_RESULT = 50
+            [
+                $opsStatus      = Netresearch_OPS_Model_Status::AUTHORIZED_WAITING_EXTERNAL_RESULT,
+                $sendMail       = true,
+                $feedbackStatus = Netresearch_OPS_Model_Status_Feedback::OPS_ORDER_FEEDBACK_STATUS_ACCEPT,
+            ],
+            // assertion for AUTHORIZATION_WAITING = 51
+            [
+                $opsStatus      = Netresearch_OPS_Model_Status::AUTHORIZATION_WAITING,
+                $sendMail       = true,
+                $feedbackStatus = Netresearch_OPS_Model_Status_Feedback::OPS_ORDER_FEEDBACK_STATUS_ACCEPT,
+            ],
+            // assertion for AUTHORIZED_UNKNOWN = 52
+            [
+                $opsStatus      = Netresearch_OPS_Model_Status::AUTHORIZED_UNKNOWN,
+                $sendMail       = true,
+                $feedbackStatus = Netresearch_OPS_Model_Status_Feedback::OPS_ORDER_FEEDBACK_STATUS_ACCEPT,
+            ],
+            // assertion for WAITING_CLIENT_PAYMENT = 41
+            [
+                $opsStatus      = Netresearch_OPS_Model_Status::WAITING_CLIENT_PAYMENT,
+                $sendMail       = true,
+                $feedbackStatus = Netresearch_OPS_Model_Status_Feedback::OPS_ORDER_FEEDBACK_STATUS_ACCEPT,
+            ],
+            // assertion for PAYMENT_REQUESTED = 9
+            [
+                $opsStatus      = Netresearch_OPS_Model_Status::PAYMENT_REQUESTED,
+                $sendMail       = true,
+                $feedbackStatus = Netresearch_OPS_Model_Status_Feedback::OPS_ORDER_FEEDBACK_STATUS_ACCEPT,
+            ],
+            // assertion for PAYMENT_PROCESSING = 91
+            [
+                $opsStatus      = Netresearch_OPS_Model_Status::PAYMENT_PROCESSING,
+                $sendMail       = true,
+                $feedbackStatus = Netresearch_OPS_Model_Status_Feedback::OPS_ORDER_FEEDBACK_STATUS_ACCEPT,
+            ],
+            // assertion for AUTHORISATION_DECLINED = 2
+            [
+                $opsStatus      = Netresearch_OPS_Model_Status::AUTHORISATION_DECLINED,
+                $sendMail       = true,
+                $feedbackStatus = Netresearch_OPS_Model_Status_Feedback::OPS_ORDER_FEEDBACK_STATUS_DECLINE,
+            ],
+            // assertion for PAYMENT_REFUSED = 93
+            [
+                $opsStatus      = Netresearch_OPS_Model_Status::PAYMENT_REFUSED,
+                $sendMail       = true,
+                $feedbackStatus = Netresearch_OPS_Model_Status_Feedback::OPS_ORDER_FEEDBACK_STATUS_DECLINE,
+            ],
+            // assertion for CANCELED_BY_CUSTOMER = 1
+            [
+                $opsStatus      = Netresearch_OPS_Model_Status::CANCELED_BY_CUSTOMER,
+                $sendMail       = false,
+                $feedbackStatus = Netresearch_OPS_Model_Status_Feedback::OPS_ORDER_FEEDBACK_STATUS_CANCEL,
+            ],
+        ];
     }
 
     /**
@@ -584,10 +561,14 @@ class Netresearch_OPS_Test_Helper_PaymentTest
 
     public function testIsInlinePaymentWithOrderIdIsTrueForInlineCcWithOrderId()
     {
-        $ccMock = $this->getModelMock('ops/payment_cc', array('getConfigPaymentAction', 'hasBrandAliasInterfaceSupport'));
-        $ccMock->expects($this->once())
-            ->method('getConfigPaymentAction')
-            ->will($this->returnValue('authorize_capture'));
+        $configMock = $this->getModelMock('ops/config', array('getInlineOrderReference'));
+
+        $configMock->expects($this->any())
+            ->method('getInlineOrderReference')
+            ->will($this->returnValue(Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID));
+        $this->replaceByMock('singleton', 'ops/config', $configMock);
+
+        $ccMock = $this->getModelMock('ops/payment_cc', array('hasBrandAliasInterfaceSupport'));
         $ccMock->expects($this->once())
             ->method('hasBrandAliasInterfaceSupport')
             ->will($this->returnValue(true));
@@ -622,13 +603,18 @@ class Netresearch_OPS_Test_Helper_PaymentTest
 
     public function testIsInlinePaymentWithOrderIdIsFalseIfQuoteIdIsConfigured()
     {
-        $ccMock = $this->getModelMock('ops/payment_cc', array('getConfigPaymentAction', 'hasBrandAliasInterfaceSupport'));
-        $ccMock->expects($this->once())
-            ->method('getConfigPaymentAction')
-            ->will($this->returnValue(''));
+        $configMock = $this->getModelMock('ops/config', array('getInlineOrderReference'));
+
+        $configMock->expects($this->any())
+            ->method('getInlineOrderReference')
+            ->will($this->returnValue(Netresearch_OPS_Model_Payment_Abstract::REFERENCE_QUOTE_ID));
+        $this->replaceByMock('singleton', 'ops/config', $configMock);
+
+        $ccMock = $this->getModelMock('ops/payment_cc', array('hasBrandAliasInterfaceSupport', 'getConfig'));
         $ccMock->expects($this->once())
             ->method('hasBrandAliasInterfaceSupport')
             ->will($this->returnValue(true));
+
 
         $payment = $this->getModelMock('payment/info', array('getMethodInstance'));
         $payment->expects($this->any())
@@ -640,29 +626,34 @@ class Netresearch_OPS_Test_Helper_PaymentTest
 
     public function testIsInlinePaymentWithOrderIdIsFalseIfQuoteIdIsConfiguredForDirectDebit()
     {
-        $directDebitMock = $this->getModelMock('ops/payment_directDebit', array('getConfigPaymentAction'));
-        $directDebitMock->expects($this->once())
-            ->method('getConfigPaymentAction')
-            ->will($this->returnValue(''));
+        $configMock = $this->getModelMock('ops/config', array('getInlineOrderReference'));
+
+        $configMock->expects($this->any())
+            ->method('getInlineOrderReference')
+            ->will($this->returnValue(Netresearch_OPS_Model_Payment_Abstract::REFERENCE_QUOTE_ID));
+        $this->replaceByMock('singleton', 'ops/config', $configMock);
 
         $payment = $this->getModelMock('payment/info', array('getMethodInstance'));
         $payment->expects($this->any())
             ->method('getMethodInstance')
-            ->will($this->returnValue($directDebitMock));
+            ->will($this->returnValue(Mage::getModel('ops/payment_directDebit')));
 
         $this->assertFalse(Mage::helper('ops/payment')->isInlinePaymentWithOrderId($payment));
     }
     public function testIsInlinePaymentWithOrderIdIsTrueIfOrderIdIsConfiguredForDirectDebit()
     {
-        $directDebitMock = $this->getModelMock('ops/payment_directDebit', array('getConfigPaymentAction'));
-        $directDebitMock->expects($this->once())
-            ->method('getConfigPaymentAction')
-            ->will($this->returnValue('authorize'));
+        $configMock = $this->getModelMock('ops/config', array('getInlineOrderReference'));
+
+        $configMock->expects($this->any())
+            ->method('getInlineOrderReference')
+            ->will($this->returnValue(Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID));
+        $this->replaceByMock('singleton', 'ops/config', $configMock);
+
 
         $payment = $this->getModelMock('payment/info', array('getMethodInstance'));
         $payment->expects($this->any())
             ->method('getMethodInstance')
-            ->will($this->returnValue($directDebitMock));
+            ->will($this->returnValue(Mage::getModel('ops/payment_directDebit')));
 
         $this->assertTrue(Mage::helper('ops/payment')->isInlinePaymentWithOrderId($payment));
     }
@@ -694,35 +685,6 @@ class Netresearch_OPS_Test_Helper_PaymentTest
         }
     }
 
-    public function testCancelOrder()
-    {
-        $params = array('status' => 2, 'payid' => 4711);
-        $status = Mage_Sales_Model_Order::STATE_CANCELED;
-        $comment = 'TestComment';
-
-        $order = $this->getModelMock('sales/order', array('save', 'cancel', 'setState'));
-        $order->expects($this->once())
-            ->method('save');
-        $order->expects($this->once())
-            ->method('cancel');
-        $order->expects($this->once())
-            ->method('setState')
-            ->with(Mage_Sales_Model_Order::STATE_CANCELED, $status, $comment)
-        ;
-
-
-        $paymentHelperMock = $this->getHelperMock('ops/payment', array('setPaymentTransactionInformation', '_getCheckout', 'cancelInvoices'));
-        $paymentHelperMock->expects($this->any())
-            ->method('setPaymentTransactionInformation');
-        $paymentHelperMock->expects($this->any())
-            ->method('_getCheckout')
-            ->will($this->returnValue($this->getModelMock('checkout/session', array('init', 'save'))))
-        ;
-
-        $paymentHelperMock->cancelOrder($order, $params, $status, $comment);
-        Mage::unregister('ops_auto_void');
-
-    }
 
     /**
      * @expectedException Mage_Core_Exception
@@ -794,15 +756,15 @@ class Netresearch_OPS_Test_Helper_PaymentTest
         $order = $this->getModelMock('sales/order', array('save', 'cancel', 'setState'));
         $order->expects($this->once())
             ->method('cancel')
-        ;
+            ->will($this->throwException(new Mage_Core_Exception('exceptional case')));
 
 
         $paymentHelperMock = $this->getHelperMock('ops/payment', array('setPaymentTransactionInformation', '_getCheckout', 'cancelInvoices'));
         $paymentHelperMock->expects($this->never())
             ->method('setPaymentTransactionInformation');
         $paymentHelperMock->expects($this->once())
-            ->method('cancelInvoices')
-            ->will($this->throwException(new Mage_Core_Exception('exceptional case')));
+            ->method('cancelInvoices');
+
 
         $paymentHelperMock->expects($this->any())
             ->method('_getCheckout')

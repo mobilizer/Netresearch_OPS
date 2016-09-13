@@ -1,8 +1,8 @@
 <?php
 /**
  * Netresearch_OPS_Helper_Data
- * 
- * @package   
+ *
+ * @package
  * @copyright 2011 Netresearch
  * @author    Thomas Kappel <thomas.kappel@netresearch.de>
  * @author    André Herrn <andre.herrn@netresearch.de>
@@ -14,19 +14,23 @@ class Netresearch_OPS_Helper_Data extends Mage_Core_Helper_Abstract
 
     /**
      * Returns config model
-     * 
+     *
      * @return Netresearch_OPS_Model_Config
      */
     public function getConfig()
     {
         return Mage::getSingleton('ops/config');
     }
-    
+
+    /**
+     * Replace all dots or any content following and including plus ("+") and minus ("-") signs.
+     * @return string
+     */
     public function getModuleVersionString()
     {
         $version = Mage::getConfig()->getNode('modules/Netresearch_OPS/version');
-        $plainversion = str_replace('.', '', $version);
-        return 'IGmg' . $plainversion;
+        $plainversion = preg_replace('/\.|[+-].+$/','', $version);
+        return 'CC1X' . $plainversion;
     }
 
     /**
@@ -78,7 +82,7 @@ class Netresearch_OPS_Helper_Data extends Mage_Core_Helper_Abstract
         }
         return $message;
     }
-    
+
     public function redirect($url)
     {
         Mage::app()->getResponse()->setRedirect($url);
@@ -125,29 +129,29 @@ class Netresearch_OPS_Helper_Data extends Mage_Core_Helper_Abstract
     public function isAdminSession()
     {
         if ($this->getAdminSession()->getUser()) {
-            return 0 < $this->getAdminSession()->getUser()->getUserId();
+            return 0 < $this->getAdminSession()->getUser()->getUserId() || $this->getAdminSession()->isLoggedIn();
         }
         return false;
     }
-    
+
     /*
-     * check if user is registering or not 
+     * check if user is registering or not
      */
     public function checkIfUserIsRegistering()
     {
         $isRegistering = false;
         $checkoutMethod = Mage::getSingleton('checkout/session')->getQuote()->getCheckoutMethod();
-        if ($checkoutMethod === Mage_Sales_Model_Quote::CHECKOUT_METHOD_REGISTER 
+        if ($checkoutMethod === Mage_Sales_Model_Quote::CHECKOUT_METHOD_REGISTER
             || $checkoutMethod === Mage_Sales_Model_Quote::CHECKOUT_METHOD_LOGIN_IN
            ) {
                 $isRegistering = true;
         }
         return $isRegistering;
-        
+
     }
-    
+
     /*
-     * check if user is registering or not 
+     * check if user is registering or not
      */
     public function checkIfUserIsNotRegistering()
     {
@@ -157,7 +161,34 @@ class Netresearch_OPS_Helper_Data extends Mage_Core_Helper_Abstract
                 $isRegistering = true;
         }
         return $isRegistering;
-        
+
     }
 
+    /**
+     * Trigger sending order confirmation and invoice emails when Magento does not:
+     * - "authorization" after return from gateway (order emails)
+     * - "authorization+capture" (order or invoice emails)
+     *
+     * @param Mage_Sales_Model_Abstract $document
+     * @return Mage_Sales_Model_Abstract
+     * @throws Exception
+     */
+    public function sendTransactionalEmail(Mage_Sales_Model_Abstract $document)
+    {
+        if ($document instanceof Mage_Sales_Model_Order) {
+
+            if (!$document->getEmailSent() && $document->getCanSendNewEmailFlag()) {
+                $document->sendNewOrderEmail();
+            }
+
+        } elseif ($document instanceof Mage_Sales_Model_Order_Invoice) {
+
+            if (!$document->getEmailSent() && Mage::getModel('ops/config')->getSendInvoice()) {
+                $document->sendEmail();
+            }
+
+        }
+
+        return $document;
+    }
 }

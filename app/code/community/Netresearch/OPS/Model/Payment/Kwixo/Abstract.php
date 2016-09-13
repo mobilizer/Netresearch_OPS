@@ -91,10 +91,10 @@ class Netresearch_OPS_Model_Payment_Kwixo_Abstract
         $formFields['CIVILITY']
                     = $this->getGender($order) == 'Male' ? 'Mr' : 'Mrs';
         $formFields = array_merge(
-            $formFields, $this->getBillToParams($order)
+            $formFields, $this->getKwixoBillToParams($order)
         );
         $formFields = array_merge(
-            $formFields, $this->getShipToParams($order)
+            $formFields, $this->getKwixoShipToParams($order)
         );
         $formFields = array_merge(
             $formFields, $this->getItemParams($order)
@@ -139,7 +139,7 @@ class Netresearch_OPS_Model_Payment_Kwixo_Abstract
      *
      * @return array
      */
-    public function getBillToParams(Mage_Sales_Model_Order $order)
+    public function getKwixoBillToParams(Mage_Sales_Model_Order $order)
     {
         $formFields = array();
         $billingAddress
@@ -179,7 +179,7 @@ class Netresearch_OPS_Model_Payment_Kwixo_Abstract
      *
      * @return array
      */
-    public function getShipToParams(Mage_Sales_Model_Order $order)
+    public function getKwixoShipToParams(Mage_Sales_Model_Order $order)
     {
         $formFields      = array();
         $shippingAddress = $order->getShippingAddress();
@@ -461,7 +461,7 @@ class Netresearch_OPS_Model_Payment_Kwixo_Abstract
 
     /**
      * get question for fields with disputable value
-     * users are asked to correct the values before redirect to Ingenico Payment Services
+     * users are asked to correct the values before redirect to PayEngine
      *
      * @param Mage_Sales_Model_Order $order         Current order
      * @param array                  $requestParams Request parameters
@@ -477,7 +477,7 @@ class Netresearch_OPS_Model_Payment_Kwixo_Abstract
 
     /**
      * get an array of fields with disputable value
-     * users are asked to correct the values before redirect to Ingenico Payment Services
+     * users are asked to correct the values before redirect to PayEngine
      *
      * @param Mage_Sales_Model_Order $order         Current order
      * @param array                  $requestParams Request parameters

@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_IngHomePay
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'ING HomePay';
+    protected $brand = 'ING HomePay';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -19,10 +22,5 @@ class Netresearch_OPS_Model_Payment_IngHomePay
     /** payment code */
     protected $_code = 'ops_ingHomePay';
 
-    /** ops payment code */
-    public function getOpsCode($payment = null)
-    {
-        return 'ING HomePay';
-    }
 }
 

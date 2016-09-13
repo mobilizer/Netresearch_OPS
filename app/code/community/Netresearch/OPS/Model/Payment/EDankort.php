@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_EDankort
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'eDankort';
+    protected $brand = 'eDankort';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -19,10 +22,5 @@ class Netresearch_OPS_Model_Payment_EDankort
     /** payment code */
     protected $_code = 'ops_eDankort';
 
-    /** ops payment code */
-    public function getOpsCode($payment=null)
-    {
-        return 'eDankort';
-    }
 }
 

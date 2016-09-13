@@ -7,7 +7,7 @@
  * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class Netresearch_OPS_Model_Backend_Operation_Capture_Parameter
-    extends  Netresearch_OPS_Model_Backend_Operation_Parameter_Abstract
+    extends Netresearch_OPS_Model_Backend_Operation_Parameter_Abstract
 {
     /**
      * checks whether we need to retrieve additional parameter for the capture request or not
@@ -20,7 +20,8 @@ class Netresearch_OPS_Model_Backend_Operation_Capture_Parameter
     {
         $opsPaymentMethodClass = get_class($opsPaymentMethod);
         $opsPmsRequiringSpecialParams = $this->getOpsConfig()
-            ->getMethodsRequiringAdditionalParametersFor(Netresearch_OPS_Model_Payment_Abstract::OPS_CAPTURE_TRANSACTION_TYPE);
+                                             ->getMethodsRequiringAdditionalParametersFor(Netresearch_OPS_Model_Payment_Abstract::OPS_CAPTURE_TRANSACTION_TYPE
+                                             );
 
         return (in_array($opsPaymentMethodClass, array_values($opsPmsRequiringSpecialParams)));
     }
@@ -35,5 +36,15 @@ class Netresearch_OPS_Model_Backend_Operation_Capture_Parameter
         if ($opsPaymentMethod instanceof Netresearch_OPS_Model_Payment_OpenInvoiceNl) {
             $this->additionalParamsModel = Mage::getModel('ops/backend_operation_capture_additional_openInvoiceNl');
         }
+    }
+
+    /**
+     * Returns the order helper for the corresponding transaction type
+     *
+     * @return Netresearch_OPS_Helper_Order_Abstract
+     */
+    public function getOrderHelper()
+    {
+        return Mage::helper('ops/order_capture');
     }
 } 

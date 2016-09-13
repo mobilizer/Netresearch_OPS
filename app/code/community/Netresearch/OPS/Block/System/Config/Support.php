@@ -4,7 +4,7 @@ class Netresearch_OPS_Block_System_Config_Support extends Mage_Adminhtml_Block_A
     implements Varien_Data_Form_Element_Renderer_Interface
 {
     protected $_template = 'ops/system/config/support.phtml';
-    protected $_downloadLogPath = 'ops/adminhtml_admin/downloadlog';
+    protected $_downloadLogPath = 'admin/downloadlog';
 
     protected function getConfig()
     {

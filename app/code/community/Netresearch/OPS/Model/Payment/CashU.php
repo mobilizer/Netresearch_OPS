@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_CashU
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'cashU';
+    protected $brand = 'cashU';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 

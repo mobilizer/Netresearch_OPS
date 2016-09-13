@@ -42,9 +42,9 @@ class Netresearch_OPS_Controller_Abstract extends Mage_Core_Controller_Front_Act
      * @return Mage_Sales_Model_Order
      */
 
-    protected function _getOrder($opsOrderId=null)
+    protected function _getOrder($opsOrderId = null)
     {
-       if (empty($this->_order)) {
+        if (empty($this->_order)) {
             if (is_null($opsOrderId)) {
                 $opsOrderId = $this->getRequest()->getParam('orderID');
             }
@@ -69,7 +69,7 @@ class Netresearch_OPS_Controller_Abstract extends Mage_Core_Controller_Front_Act
 
     /**
      * get payment helper
-     * 
+     *
      * @return Netresearch_OPS_Helper_Payment
      */
     protected function getPaymentHelper()
@@ -79,12 +79,17 @@ class Netresearch_OPS_Controller_Abstract extends Mage_Core_Controller_Front_Act
     
     /**
      * get direct link helper
-     * 
+     *
      * @return Netresearch_OPS_Helper_Directlink
      */
     protected function getDirectlinkHelper()
     {
         return Mage::helper('ops/directlink');
+    }
+
+    protected function getSubscriptionHelper()
+    {
+        return Mage::helper('ops/subscription');
     }
 
     /**
@@ -94,20 +99,55 @@ class Netresearch_OPS_Controller_Abstract extends Mage_Core_Controller_Front_Act
      */
     protected function _validateOPSData()
     {
+        $helper = Mage::helper('ops');
         $params = $this->getRequest()->getParams();
-        $order = $this->_getOrder();
-        if (!$order->getId()) {
-            $this->_getCheckout()->addError($this->__('Order is not valid'));
-            return false;
+        if ($this->getSubscriptionHelper()->isSubscriptionFeedback($params)) {
+            $profile = $this->getSubscriptionHelper()->getProfileForSubscription($params['orderID']);
+            if (!$profile->getId()) {
+                $this->_getCheckout()->addError($this->__('Subscription is not valid'));
+                $helper->log(
+                    $helper->__(
+                        "Incoming PayEngine Feedback\n\nRequest Path: %s\nParams: %s\n\nSubscription not valid\n",
+                        $this->getRequest()->getPathInfo(),
+                        serialize($this->getRequest()->getParams())
+                    )
+                );
+                return false;
+            }
+            $storeId = $profile->getStoreId();
+        } else {
+            $order = $this->_getOrder();
+            if (!$order->getId()) {
+                $helper->log(
+                    $helper->__(
+                        "Incoming PayEngine Feedback\n\nRequest Path: %s\nParams: %s\n\nOrder not valid\n",
+                        $this->getRequest()->getPathInfo(),
+                        serialize($this->getRequest()->getParams())
+                    )
+                );
+                $this->_getCheckout()->addError($this->__('Order is not valid'));
+                return false;
+            }
+            $storeId = $order->getStoreId();
         }
-        $secureKey = $this->_getApi()->getConfig()->getShaInCode($order->getStoreId());
+
+        //remove custom responseparams, because they are not hashed by PayEngine
+        if ($this->getConfig()->getConfigData('template') == Netresearch_OPS_Model_Payment_Abstract::TEMPLATE_OPS_IFRAME
+            && array_key_exists('IFRAME', $params)
+        ) {
+            unset($params['IFRAME']);
+        }
+
+        $secureKey = $this->getConfig()->getShaInCode($storeId);
         $secureSet = $this->getPaymentHelper()->getSHAInSet($params, $secureKey);
 
-        $helper = Mage::helper('ops');
-        $helper->log($helper->__("Incoming Ingenico Payment Services Feedback\n\nRequest Path: %s\nParams: %s\n",
-            $this->getRequest()->getPathInfo(),
-            serialize($this->getRequest()->getParams())
-        ));
+        $helper->log(
+            $helper->__(
+                "Incoming PayEngine Feedback\n\nRequest Path: %s\nParams: %s\n",
+                $this->getRequest()->getPathInfo(),
+                serialize($this->getRequest()->getParams())
+            )
+        );
         
         if (Mage::helper('ops/payment')->shaCryptValidation($secureSet, $params['SHASIGN']) !== true) {
             $this->_getCheckout()->addError($this->__('Hash is not valid'));
@@ -120,8 +160,13 @@ class Netresearch_OPS_Controller_Abstract extends Mage_Core_Controller_Front_Act
     public function isJsonRequested($params)
     {
         if (array_key_exists('RESPONSEFORMAT', $params) && $params['RESPONSEFORMAT'] == 'JSON') {
-                return true;
+            return true;
         }
         return false;
+    }
+
+    public function getSubscriptionManager()
+    {
+        return Mage::getModel('ops/subscription_manager');
     }
 }

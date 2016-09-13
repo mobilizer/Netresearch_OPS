@@ -6,7 +6,6 @@
  * @copyright   Copyright (c) 2014 Netresearch GmbH & Co. KG (http://www.netresearch.de)
  * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
-
 class Netresearch_OPS_Model_Backend_Operation_Refund_Parameter
     extends Netresearch_OPS_Model_Backend_Operation_Parameter_Abstract
 {
@@ -21,10 +20,12 @@ class Netresearch_OPS_Model_Backend_Operation_Refund_Parameter
     {
         $opsPaymentMethodClass = get_class($opsPaymentMethod);
         $opsPmsRequiringSpecialParams = $this->getOpsConfig()
-                                             ->getMethodsRequiringAdditionalParametersFor(Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_TRANSACTION_TYPE);
+                                             ->getMethodsRequiringAdditionalParametersFor(Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_TRANSACTION_TYPE
+                                             );
 
         return (in_array($opsPaymentMethodClass, array_values($opsPmsRequiringSpecialParams)));
     }
+
     /**
      * sets the model which retrieves the additional params for the refund request
      *
@@ -37,12 +38,15 @@ class Netresearch_OPS_Model_Backend_Operation_Refund_Parameter
         }
     }
 
-    protected function addPmSpecificParams(Netresearch_OPS_Model_Payment_Abstract $opsPaymentMethod, Varien_Object $payment, $amount)
-    {
+    protected function addPmSpecificParams(Netresearch_OPS_Model_Payment_Abstract $opsPaymentMethod,
+        Varien_Object $payment, $amount
+    ) {
         if ($this->isPmRequiringAdditionalParams($opsPaymentMethod)) {
             $this->setAdditionalParamsModelFor($opsPaymentMethod);
-            if ($this->additionalParamsModel instanceof Netresearch_OPS_Model_Backend_Operation_Parameter_Additional_Interface) {
-                $params              = $this->additionalParamsModel->extractAdditionalParams(Mage::registry('current_creditmemo'));
+            if ($this->additionalParamsModel instanceof
+                Netresearch_OPS_Model_Backend_Operation_Parameter_Additional_Interface
+            ) {
+                $params = $this->additionalParamsModel->extractAdditionalParams(Mage::registry('current_creditmemo'));
                 $this->requestParams = array_merge($this->requestParams, $params);
             }
         }
@@ -50,4 +54,15 @@ class Netresearch_OPS_Model_Backend_Operation_Refund_Parameter
         return $this;
     }
 
-} 
+    /**
+     * Returns the order helper for the corresponding transaction type
+     *
+     * @return Netresearch_OPS_Helper_Order_Abstract
+     */
+    public function getOrderHelper()
+    {
+        return Mage::helper('ops/order_refund');
+    }
+
+
+}

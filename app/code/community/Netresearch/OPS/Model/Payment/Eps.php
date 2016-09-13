@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_Eps
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'EPS';
+    protected $brand = 'EPS';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -18,11 +21,4 @@ class Netresearch_OPS_Model_Payment_Eps
 
     /** payment code */
     protected $_code = 'ops_eps';
-
-    /** ops payment code */
-    public function getOpsCode($payment=null)
-    {
-        return 'EPS';
-    }
 }
-

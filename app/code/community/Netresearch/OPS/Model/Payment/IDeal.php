@@ -11,6 +11,9 @@
 class Netresearch_OPS_Model_Payment_IDeal
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'iDEAL';
+    protected $brand = 'iDEAL';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -21,12 +24,6 @@ class Netresearch_OPS_Model_Payment_IDeal
 
     /** payment code */
     protected $_code = 'ops_iDeal';
-
-    /** ops payment code */
-    public function getOpsCode($payment = null)
-    {
-        return 'iDEAL';
-    }
 
     /**
      * adds payment specific information to the payment

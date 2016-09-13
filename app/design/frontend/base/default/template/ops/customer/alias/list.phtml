@@ -35,6 +35,7 @@
         <col width="1" />
         <thead>
             <tr>
+                <th><?php echo Mage::helper('ops')->__('Payment method') ?></th>
                 <th><?php echo Mage::helper('ops')->__('Credit Card Type') ?></th>
                 <th><?php echo Mage::helper('ops')->__('Card Number/Account Number') ?></th>
                 <th><?php echo Mage::helper('ops')->__('Expiration Date') ?></th>
@@ -48,6 +49,7 @@
             <?php foreach ($aliases as $alias): ?>
                 <?php $deleteUrl = $this->getAliasDeleteUrl($alias->getId()); ?>
                 <tr>
+                    <td><?php echo $this->getMethodName($alias->getPaymentMethod()); ?></td>
                     <td><?php echo $this->escapeHtml($alias->getBrand()); ?></td>
                     <td><?php echo $this->escapeHtml($alias->getPseudoAccountOrCCNo()); ?></td>
                     <td><?php echo $this->escapeHtml($alias->getExpirationDate()); ?></td>

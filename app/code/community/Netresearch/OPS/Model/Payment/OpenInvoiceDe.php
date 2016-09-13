@@ -10,7 +10,8 @@
 class Netresearch_OPS_Model_Payment_OpenInvoiceDe
     extends Netresearch_OPS_Model_Payment_OpenInvoice_Abstract
 {
-    const CODE = 'Open Invoice DE';
+    protected $pm = 'Open Invoice DE';
+    protected $brand = 'Open Invoice DE';
 
     /** if we can capture directly from the backend */
     protected $_canBackendDirectCapture = false;
@@ -37,8 +38,10 @@ class Netresearch_OPS_Model_Payment_OpenInvoiceDe
             return false;
         }
 
-        /* not available if quote contains a coupon */
-        if ($quote->getSubtotal() != $quote->getSubtotalWithDiscount()) {
+        /* not available if quote contains a coupon and allow_discounted_carts is disabled */
+        if (!$this->isAvailableForDiscountedCarts()
+            && $quote->getSubtotal() != $quote->getSubtotalWithDiscount()
+        ) {
             return false;
         }
 
@@ -60,21 +63,33 @@ class Netresearch_OPS_Model_Payment_OpenInvoiceDe
         $formFields = parent::getMethodDependendFormFields($order, $requestParams);
 
         $shippingAddress = $order->getShippingAddress();
-        $birthday = new DateTime($order->getCustomerDob());
 
         $gender = Mage::getSingleton('eav/config')
             ->getAttribute('customer', 'gender')
             ->getSource()
             ->getOptionText($order->getCustomerGender());
 
-        $formFields['CIVILITY']      = $gender == 'Male' ? 'Herr' : 'Frau';
-        $formFields['ORDERSHIPCOST'] = round(100 * $order->getBaseShippingInclTax());
-        $formFields['OWNERADDRESS']  = str_replace("\n", ' ',$shippingAddress->getStreet(-1));
-        $formFields['OWNERCTY']      = $shippingAddress->getCountry();
-        $formFields['OWNERTELNO']    = $shippingAddress->getTelephone();
-        $formFields['OWNERTOWN']     = $shippingAddress->getCity();
+	    $formFields[ 'CIVILITY' ]               = $gender == 'Male' ? 'Herr' : 'Frau';
+	    $formFields[ 'ECOM_CONSUMER_GENDER' ]   = $gender == 'Male' ? 'M' : 'F';
+
+        if (!$this->getConfig()->canSubmitExtraParameter($order->getStoreId())) {
+            // add the shipto parameters even if the submitOption is false, because they are required for OpenInvoice
+            $shipToParams = $this->getRequestHelper()->extractShipToParameters($shippingAddress, $order);
+            $formFields   = array_merge($formFields, $shipToParams);
+        }
 
         return $formFields;
     }
+
+    /**
+     * getter for the allow_discounted_carts
+     *
+     * @return array
+     */
+    protected function isAvailableForDiscountedCarts()
+    {
+        return (bool) $this->getConfigData('allow_discounted_carts');
+    }
+
 }
 

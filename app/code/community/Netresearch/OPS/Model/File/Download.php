@@ -17,7 +17,7 @@ class Netresearch_OPS_Model_File_Download
      * If the file is bigger than the threshold, the last written lines, up to the size of the
      * threshold are returned
      *
-     * @param $path Path to file on server
+     * @param string $path Path to file on server
      * @param int $threshold Max file size, default is 1MB
      * @return string Path to file to offer to download
      * @throws Mage_Core_Exception

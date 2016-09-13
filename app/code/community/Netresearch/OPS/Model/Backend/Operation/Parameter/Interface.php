@@ -11,8 +11,7 @@ interface Netresearch_OPS_Model_Backend_Operation_Parameter_Interface
     public function getRequestParams(
         Netresearch_OPS_Model_Payment_Abstract $opsPaymentMethod,
         Varien_Object $payment,
-        $amount,
-        $arrInfo
+        $amount
     );
 
 }

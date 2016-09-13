@@ -26,12 +26,10 @@ class Netresearch_OPS_Helper_Directlink extends Mage_Core_Helper_Abstract
     {
         $payment = $order->getPayment();
         $payment->setTransactionId($transactionID."/".$subPayID);
-        $transaction = $payment->addTransaction($typename, null, false, $comment);
-        $transaction->setParentTxnId($transactionID);
-        $transaction->setIsClosed($closed);
-        $transaction->setAdditionalInformation("arrInfo", serialize($arrInformation));
-        $transaction->save();
-        $order->save();
+//        $transaction = $payment->addTransaction($typename, null, false, $comment);
+        $payment->setParentTransactionId($transactionID);
+        $payment->setIsTransactionClosed($closed);
+        $payment->setTransactionAdditionalInfo($arrInformation, null);
         return $this;
     }
 
@@ -65,32 +63,32 @@ class Netresearch_OPS_Helper_Directlink extends Mage_Core_Helper_Abstract
     public function getTypeForStatus($status)
     {
         switch ($status) {
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_REFUNDED :
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_WAITING:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_UNCERTAIN_STATUS :
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_REFUSED :
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_DECLINED_ACQUIRER :
+            case Netresearch_OPS_Model_Status::REFUNDED :
+            case Netresearch_OPS_Model_Status::REFUND_PENDING:
+            case Netresearch_OPS_Model_Status::REFUND_UNCERTAIN :
+            case Netresearch_OPS_Model_Status::REFUND_REFUSED :
+            case Netresearch_OPS_Model_Status::REFUNDED_OK :
                 return Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_TRANSACTION_TYPE;
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REQUESTED :
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSED_MERCHANT :
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSING:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_UNCERTAIN:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_IN_PROGRESS:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REFUSED:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DECLINED_ACQUIRER:
+            case Netresearch_OPS_Model_Status::PAYMENT_REQUESTED :
+            case Netresearch_OPS_Model_Status::PAYMENT_PROCESSED_BY_MERCHANT :
+            case Netresearch_OPS_Model_Status::PAYMENT_PROCESSING:
+            case Netresearch_OPS_Model_Status::PAYMENT_UNCERTAIN:
+            case Netresearch_OPS_Model_Status::PAYMENT_IN_PROGRESS:
+            case Netresearch_OPS_Model_Status::PAYMENT_REFUSED:
+            case Netresearch_OPS_Model_Status::PAYMENT_DECLINED_BY_ACQUIRER:
                 return Netresearch_OPS_Model_Payment_Abstract::OPS_CAPTURE_TRANSACTION_TYPE;
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_VOIDED: //Void finished
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_VOIDED_ACCEPTED:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_WAITING:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_UNCERTAIN:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_REFUSED:
+            case Netresearch_OPS_Model_Status::AUTHORIZED_AND_CANCELLED: //Void finished
+            case Netresearch_OPS_Model_Status::AUTHORIZED_AND_CANCELLED_OK:
+            case Netresearch_OPS_Model_Status::DELETION_WAITING:
+            case Netresearch_OPS_Model_Status::DELETION_UNCERTAIN:
+            case Netresearch_OPS_Model_Status::DELETION_REFUSED:
                 return Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_TRANSACTION_TYPE;
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED_WAITING:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED_UNCERTAIN:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED_REFUSED:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED_OK:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DELETED_PROCESSED_MERCHANT:
+            case Netresearch_OPS_Model_Status::PAYMENT_DELETED:
+            case Netresearch_OPS_Model_Status::PAYMENT_DELETION_PENDING:
+            case Netresearch_OPS_Model_Status::PAYMENT_DELETION_UNCERTAIN:
+            case Netresearch_OPS_Model_Status::PAYMENT_DELETION_REFUSED:
+            case Netresearch_OPS_Model_Status::PAYMENT_DELETION_OK:
+            case Netresearch_OPS_Model_Status::DELETION_HANDLED_BY_MERCHANT:
                 return Netresearch_OPS_Model_Payment_Abstract::OPS_DELETE_TRANSACTION_TYPE;
         }
     }
@@ -105,159 +103,24 @@ class Netresearch_OPS_Helper_Directlink extends Mage_Core_Helper_Abstract
      */
     public function processFeedback($order, $params)
     {
-        $transaction = null;
-        if ($params['STATUS'] < 50 || $params['STATUS'] >= 60) {
-            try {
-                $transaction = $this->getPaymentTransaction($order, null, $this->getTypeForStatus($params['STATUS']));
-            } catch (Mage_Core_Exception $e) {
-                $transaction = null;
-            }
-        }
-        if (false == $this->isValidOpsRequest($transaction, $order, $params)) {
-            $order->addStatusHistoryComment(
-                Mage::helper('ops')->__(
-                    'Could not perform actions for Ingenico Payment Services status: %s.',
-                    Mage::helper('ops')->getStatusText($params['STATUS'])
-                )
-            )->save();
-            throw new Mage_Core_Exception('invalid Ingenico Payment Services request');
-        }
+        Mage::getModel('ops/response_handler')->processResponse($params, $order->getPayment()->getMethodInstance());
+        $order->getPayment()->save();
 
-        Mage::helper('ops/payment')->saveOpsStatusToPayment($order->getPayment(), $params);
-        switch ($params['STATUS']) {
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_INVALID :
-                break;
-
-            /*
-             * Refund Actions
-             */
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_REFUNDED :
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_PROCESSED_MERCHANT :
-                Mage::helper('ops/order_refund')->createRefund($order, $params);
-                break;
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_WAITING:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_UNCERTAIN_STATUS :
-                $order->addStatusHistoryComment(
-                    Mage::helper('ops')->__(
-                        'Refund is waiting or uncertain. Ingenico Payment Services status: %s.',
-                        Mage::helper('ops')->getStatusText($params['STATUS'])
-                    )
-                );
-                $order->save();
-                break;
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_REFUSED :
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_DECLINED_ACQUIRER :
-                $this->closePaymentTransaction(
-                    $order,
-                    $params,
-                    Netresearch_OPS_Model_Payment_Abstract::OPS_REFUND_TRANSACTION_TYPE,
-                    Mage::helper('ops')->__(
-                        'Refund was refused. Automatic creation failed. Ingenico Payment Services status: %s.',
-                        Mage::helper('ops')->getStatusText($params['STATUS'])
-                    )
-                );
-                break;
-
-            /*
-             * Capture Actions
-             */
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REQUESTED :
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSED_MERCHANT :
-                Mage::helper("ops/order_capture")->acceptCapture($order, $params);
-                break;
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_PROCESSING:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_UNCERTAIN:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_IN_PROGRESS:
-                $order->addStatusHistoryComment(
-                    Mage::helper('ops')->__(
-                        'Capture is waiting or uncertain. Ingenico Payment Services status: %s.',
-                        Mage::helper('ops')->getStatusText($params['STATUS'])
-                    )
-                );
-                $order->save();
-                break;
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REFUSED:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DECLINED_ACQUIRER:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_AUTH_REFUSED :
-                $this->closePaymentTransaction(
-                    $order,
-                    $params,
-                    Netresearch_OPS_Model_Payment_Abstract::OPS_CAPTURE_TRANSACTION_TYPE,
-                    Mage::helper('ops')->__(
-                        'Capture was refused. Automatic creation failed. Ingenico Payment Services status: %s.',
-                        $params['STATUS']
-                    )
-                );
-                break;
-
-            /*
-             * Void Actions
-             */
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_VOIDED: //Void finished
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_VOIDED_ACCEPTED:
-                Mage::helper("ops/order_void")->acceptVoid($order, $params);
-                break;
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_WAITING:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_UNCERTAIN:
-                $order->addStatusHistoryComment(
-                    Mage::helper('ops')->__(
-                        'Void is waiting or uncertain. Ingenico Payment Services status: %s.',
-                        Mage::helper('ops')->getStatusText($params['STATUS'])
-                    )
-                );
-                $order->save();
-                break;
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_REFUSED:
-                $this->closePaymentTransaction(
-                    $order,
-                    $params,
-                    Netresearch_OPS_Model_Payment_Abstract::OPS_VOID_TRANSACTION_TYPE,
-                    Mage::helper('ops')->__(
-                        'Void was refused. Automatic creation failed. Ingenico Payment Services status: %s.',
-                        Mage::helper('ops')->getStatusText($params['STATUS'])
-                    )
-                );
-                break;
-
-            /*
-             * Authorize Actions
-             */
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED_WAITING:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED_UNKNOWN:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED_TO_GET_MANUALLY:
-            case Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED_KWIXO:
-                if ($params['STATUS'] == Netresearch_OPS_Model_Payment_Abstract::OPS_AUTHORIZED
-                && $order->getPayment()->getMethodInstance() instanceof Netresearch_OPS_Model_Payment_Kwixo_Abstract) {
-                    Mage::helper('ops/data')->log('acceptOrder in directLink helper');
-                    Mage::helper('ops/payment')->acceptOrder($order, $params);
-                    $comment = Mage::helper('ops')->__('Authorization status changed. Current Ingenico Payment Services status is: %s.', Mage::helper('ops')->getStatusText($params['STATUS']));
-//                    $this->closePaymentTransaction($order, null, 'authorization', "", false);
-                } else {
-                    $order->addStatusHistoryComment(Mage::helper('ops')->__('Authorization status changed. Current Ingenico Payment Services status is: %s.', Mage::helper('ops')->getStatusText($params['STATUS'])));
-                    $order->save();
-                }
-                break;
-            default:
-                $order->addStatusHistoryComment(
-                    Mage::helper('ops')->__('Unknown Ingenico Payment Services status: %s.', Mage::helper('ops')->getStatusText($params['STATUS']))
-                );
-                $order->save();
-                Mage::helper("ops")->log("Unknown status code:".$params['STATUS']);
-                break;
-        }
+        return;
     }
 
     /**
      * Get the payment transaction by PAYID and Operation
      *
      * @param Mage_Sales_Model_Order $order
-     * @param int                    $payid
-     * @param string                 $authorization
+     * @param int                    $payId
+     * @param string                 $operation
      *
      * @return Mage_Sales_Model_Order_Payment_Transaction
+     *
+     * @throws Mage_Core_Exception
      */
-    public function getPaymentTransaction($order, $payid, $operation)
+    public function getPaymentTransaction($order, $payId, $operation)
     {
         $helper = Mage::helper('ops');
         $transactionCollection = Mage::getModel('sales/order_payment_transaction')
@@ -265,15 +128,15 @@ class Netresearch_OPS_Helper_Directlink extends Mage_Core_Helper_Abstract
             ->addAttributeToFilter('txn_type', $operation)
             ->addAttributeToFilter('is_closed', 0)
             ->addAttributeToFilter('order_id', $order->getId());
-        if ($payid != '') {
-            $transactionCollection->addAttributeToFilter('parent_txn_id', $payid);
+        if ($payId != '') {
+            $transactionCollection->addAttributeToFilter('parent_txn_id', $payId);
         }
 
         if ($transactionCollection->count()>1 || $transactionCollection->count() == 0) {
             $errorMsq = $helper->__(
-                'Warning, transaction count is %s instead of 1 for the Payid "%s", order "%s" and Operation "%s".',
+                "Warning, transaction count is %s instead of 1 for the Payid '%s', order '%s' and Operation '%s'.",
                 $transactionCollection->count(),
-                $payid,
+                $payId,
                 $order->getId(),
                 $operation
             );
@@ -372,10 +235,10 @@ class Netresearch_OPS_Helper_Directlink extends Mage_Core_Helper_Abstract
 
         if ($this->getTypeForStatus($opsRequestParams['STATUS']) == Netresearch_OPS_Model_Payment_Abstract::OPS_CAPTURE_TRANSACTION_TYPE) {
             if (is_null($requestedAmount)) {
-                Mage::helper('ops')->log('Please configure Ingenico Payment Services to submit amount');
+                Mage::helper('ops')->log('Please configure PayEngine to submit amount');
                 return false;
             }
-            $grandTotal = Mage::helper('ops/payment')->getBaseGrandTotalFromSalesObject($order);
+            $grandTotal = $this->formatAmount(Mage::helper('ops/payment')->getBaseGrandTotalFromSalesObject($order));
             if ($grandTotal != $requestedAmount) {
                 if (is_null($openTransaction)
                     || $expectedAmount != $requestedAmount
@@ -385,47 +248,6 @@ class Netresearch_OPS_Helper_Directlink extends Mage_Core_Helper_Abstract
             }
         }
         return true;
-    }
-
-    /**
-     * Close a payment transaction
-     *
-     * @param Mage_Sales_Model_Order $order
-     * @param array $params
-     *
-     * @return Mage_Sales_Model_Order_Payment_Transaction
-     */
-    public function closePaymentTransaction($order, $params, $type, $comment = "", $isCustomerNotified = false)
-    {
-        try {
-            $transaction = Mage::helper('ops/directlink')->getPaymentTransaction(
-                $order,
-                $params['PAYID'],
-                $type
-            );
-
-            if (1 !== $transaction->getIsClosed()) {
-                $transaction->setIsClosed(1);
-                $transaction->save();
-            }
-
-            $transactionId = $transaction->getTxnId();
-            if ($comment) {
-                $comment .= ' Transaction ID: '.'"'.$transactionId.'"';
-                $order
-                    ->addStatusHistoryComment($comment)
-                    ->setIsCustomerNotified($isCustomerNotified);
-            }
-
-        } catch (Exception $e) {
-            if (array_key_exists('STATUS', $params) && in_array($params['STATUS'], array(Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_REFUSED,
-                                Netresearch_OPS_Model_Payment_Abstract::OPS_PAYMENT_DECLINED_ACQUIRER))) {
-                Mage::helper('ops/payment')->declineOrder($order, $params);
-            }
-
-        }
-
-        $order->save();
     }
 
     public function performDirectLinkRequest($quote, $params, $storeId = null)
@@ -439,7 +261,7 @@ class Netresearch_OPS_Helper_Directlink extends Mage_Core_Helper_Abstract
             && Mage::helper('ops/payment')->isPaymentFailed($response['STATUS'])
         ) {
             Mage::getSingleton('checkout/type_onepage')->getCheckout()->setGotoSection('payment');
-            throw new Mage_Core_Exception(Mage::helper('ops/data')->__('Ingenico Payment Services Payment failed'));
+            throw new Mage_Core_Exception(Mage::helper('ops/data')->__('PayEngine Payment failed'));
         }
         return $response;
     }

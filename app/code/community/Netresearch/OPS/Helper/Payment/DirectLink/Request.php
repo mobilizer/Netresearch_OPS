@@ -285,6 +285,7 @@ abstract class Netresearch_OPS_Helper_Payment_DirectLink_Request
             'ORIG'                          => $this->getDataHelper()->getModuleVersionString(),
             'EMAIL'                         => $order->getCustomerEmail(),
             'REMOTE_ADDR'                   => $quote->getRemoteIp(),
+            'RTIMEOUT'                      => $this->getConfig()->getTransActionTimeout()
         );
 
         $ownerParams = $this->getOwnerParams($quote, $billingAddress, $requestParams);
@@ -303,7 +304,7 @@ abstract class Netresearch_OPS_Helper_Payment_DirectLink_Request
      */
     protected function getOwnerParams($quote, $billingAddress, $requestParams)
     {
-        $ownerParams = $this->getRequestHelper()->getOwnerParams($quote, $billingAddress);
+        $ownerParams = $this->getRequestHelper()->getOwnerParams($billingAddress, $quote);
         if (array_key_exists('OWNERADDRESS', $ownerParams) && array_key_exists('OWNERTOWN', $ownerParams)) {
             $ownerAddrParams = $this->decodeParamsForDirectLinkCall(
                 array('OWNERADDRESS' => $ownerParams['OWNERADDRESS'], 'OWNERTOWN' => $ownerParams['OWNERTOWN'])
@@ -317,12 +318,12 @@ abstract class Netresearch_OPS_Helper_Payment_DirectLink_Request
     /**
      * @return bool
      */
-    protected function canUseOrderId(Varien_Object $payment)
+    public function canUseOrderId(Varien_Object $payment)
     {
         $methodInstance = $payment->getMethodInstance();
         return
             $this->getConfig()->getInlineOrderReference() == Netresearch_OPS_Model_Payment_Abstract::REFERENCE_ORDER_ID
-            && ($methodInstance instanceof Netresearch_OPS_Model_Payment_DirectLink && 0 < strlen(trim($methodInstance->getConfigPaymentAction())));
+            && $methodInstance instanceof Netresearch_OPS_Model_Payment_DirectLink;
     }
 
 

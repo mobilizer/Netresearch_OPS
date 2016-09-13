@@ -10,6 +10,9 @@
 class Netresearch_OPS_Model_Payment_BelfiusDirectNet
     extends Netresearch_OPS_Model_Payment_Abstract
 {
+    protected $pm = 'Belfius Direct Net';
+    protected $brand = 'Belfius Direct Net';
+
     /** Check if we can capture directly from the backend */
     protected $_canBackendDirectCapture = true;
 
@@ -18,11 +21,5 @@ class Netresearch_OPS_Model_Payment_BelfiusDirectNet
 
     /** payment code */
     protected $_code = 'ops_belfiusDirectNet';
-
-    /** ops payment code */
-    public function getOpsCode($payment=null)
-    {
-        return 'Belfius Direct Net';
-    }
 }
 

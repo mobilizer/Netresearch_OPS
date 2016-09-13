@@ -57,8 +57,8 @@
     </default>
     <adminhtml_sales_order_create_index>
         <reference name="head">
-            <action method="addItem"><type>skin_js</type><name>js/ops/payment.js</name></action>
-
+            <action method="addJs"><script>netresearch/ops/payment.js</script></action>
+            <action method="addJs"><script>netresearch/ops/tokenization.js</script></action>
         </reference>
     </adminhtml_sales_order_create_index>
 
